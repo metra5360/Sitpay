@@ -21,7 +21,6 @@
         }
         input[type=number] {
             -moz-appearance: textfield;
-            appearance: textfield;
         }
     </style>
 </head>
@@ -93,7 +92,6 @@
             </div>
 
             <div class="p-4 bg-[#111827] border-t border-gray-800 space-y-3">
-                
                 <div id="photo-preview-container" class="hidden relative w-24 h-24 rounded-lg overflow-hidden border border-yellow-500/40">
                     <img id="photo-preview-img" src="" class="w-full h-full object-cover">
                     <button id="btn-remove-photo" class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white rounded-full p-1 transition">
@@ -102,10 +100,9 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-center gap-3">
-                    
                     <label class="w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 bg-[#1f2937] hover:bg-gray-700 text-gray-300 font-medium py-3.5 px-5 rounded-xl transition duration-200 border border-gray-700 text-sm shrink-0">
                         <i data-lucide="camera" class="w-5 h-5 text-yellow-500"></i>
-                        <span>Додати фото</span>
+                        <span>Додати photo</span>
                         <input type="file" id="input-file" accept="image/*" class="hidden">
                     </label>
 
@@ -127,10 +124,8 @@
                         <span class="text-sm">Надіслати</span>
                         <i data-lucide="send" class="w-4 h-4"></i>
                     </button>
-
                 </div>
             </div>
-
         </section>
     </main>
 
@@ -140,29 +135,21 @@
     </div>
 
     <script type="module">
-        // Імпортуємо необхідні модулі Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Глобальні змінні середовища (інтегруються автоматично або використовуються демонстраційні налаштування)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sitcochat-global';
+        const appId = 'sitcochat-global';
         
-        // Перевіряємо наявність конфігурації, інакше використовуємо дефолтну публічну структуру
-        let firebaseConfig;
-        if (typeof __firebase_config !== 'undefined') {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } else {
-            // Безпечний публічний фалбек для локального тестування та GitHub Pages
-            const firebaseConfig = {
-                apiKey: "AIzaSyAHCDpcU6pHKBO6QAnqivkzR4--UHWBUto",
-                authDomain: "sitpay-1ca22.firebaseapp.com",
-                projectId: "sitpay-1ca22",
-                storageBucket: "sitpay-1ca22.firebasestorage.app",
-                messagingSenderId: "803775851196",
-                appId: "1:803775851196:web:7b2a5eff07e2afe67a7eb9"
-            };
-        }
+        // СЮДИ ВСТАВ СВОЇ КЛЮЧІ З FIREBASE:
+        const firebaseConfig = {
+          apiKey: "AIzaSyAHCDpcU6pHKBO6QAnqivkzR4--UHWBUto",
+          authDomain: "sitpay-1ca22.firebaseapp.com",
+          projectId: "sitpay-1ca22",
+          storageBucket: "sitpay-1ca22.firebasestorage.app",
+          messagingSenderId: "803775851196",
+          appId: "1:803775851196:web:7b2a5eff07e2afe67a7eb9"
+        };
 
         // Ініціалізація Firebase
         const app = initializeApp(firebaseConfig);
@@ -172,10 +159,10 @@
         // Стан додатку
         let currentUser = null;
         let activeRecipientId = null;
-        let myBalance = 1000; // Початковий баланс для демонстрації Ситкоінів
-        let base64Photo = null; // Збережене відкориговане зображення
+        let myBalance = 1000;
+        let base64Photo = null;
 
-        // Звукові ефекти через Tone.js (не потребують завантаження .mp3 файлів)
+        // Звуки
         const coinSynth = new Tone.PolySynth(Tone.Synth, {
             oscillator: { type: "sine" },
             envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.8 }
@@ -183,16 +170,12 @@
 
         function playCoinSound() {
             try {
-                if (Tone.context.state !== 'running') {
-                    Tone.start();
-                }
+                if (Tone.context.state !== 'running') Tone.start();
                 const now = Tone.now();
                 coinSynth.triggerAttackRelease("C6", "16n", now);
                 coinSynth.triggerAttackRelease("E6", "16n", now + 0.08);
                 coinSynth.triggerAttackRelease("G6", "8n", now + 0.16);
-            } catch(e) {
-                console.log("Аудіоконтекст ще не активований користувачем");
-            }
+            } catch(e) {}
         }
 
         function playErrorSound() {
@@ -203,7 +186,6 @@
             } catch(e) {}
         }
 
-        // Custom Notification (Toast замість alert)
         function showNotification(msg, isError = true) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
@@ -220,59 +202,35 @@
             }, 4000);
         }
 
-        // Авторизація користувача (RULE 3 - Auth Before Queries)
-        const initAuth = async () => {
+        // Обробник натискання на кнопку "Увійти анонімно"
+        const handleAuthClick = async () => {
+            const btnEnter = document.getElementById('btn-enter');
+            btnEnter.disabled = true;
+            btnEnter.innerText = "Підключення...";
+            
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await signInAnonymously(auth);
             } catch (error) {
                 console.error("Помилка авторизації:", error);
-                showNotification("Помилка авторизації у Firebase. Перевірте з'єднання.");
+                showNotification("Помилка Firebase. Перевірте правильність введених ключів у коді.");
+                btnEnter.disabled = false;
+                btnEnter.innerHTML = `<i data-lucide="shield-check" class="w-5 h-5"></i> Увійти анонімно`;
+                lucide.createIcons();
             }
         };
 
-        // Запуск авторизації
-        i// Функція, яка викликається ПРИ КЛІКУ на кнопку входу
-const handleAuthClick = async () => {
-    const btnEnter = document.getElementById('btn-enter');
+        // Навішуємо подію кліку на кнопку входу
+        document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
 
-    // Блокуємо кнопку, щоб користувач не тиснув сто разів поспіль
-    btnEnter.disabled = true;
-    btnEnter.innerText = "Вхід...";
-
-    try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
-        }
-    } catch (error) {
-        console.error("Помилка авторизації:", error);
-        showNotification("Помилка підключення. Перевірте консоль або налаштування Firebase.");
-
-        // Якщо помилка — повертаємо кнопку в початковий стан
-        btnEnter.disabled = false;
-        btnEnter.innerHTML = `<i data-lucide="shield-check" class="w-5 h-5"></i> Увійти анонімно`;
-        lucide.createIcons();
-    }
-};
-
-// Прив'язуємо клік до нашої кнопки на екрані
-document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
-        // Слідкуємо за станом користувача
+        // Коли користувач успішно увійшов
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
                 document.getElementById('auth-screen').classList.add('opacity-0', 'pointer-events-none');
                 
-                // Відображаємо ідентифікатор користувача
                 const shortId = `ID: ${user.uid.substring(0, 12)}...`;
                 document.getElementById('my-short-id').innerText = shortId;
 
-                // Створюємо або отримуємо запис користувача у базі (Реєстрація у списку активних)
                 const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
                 const userDoc = await getDoc(userRef);
 
@@ -287,27 +245,21 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                     myBalance = userDoc.data().balance || 1000;
                 }
                 updateBalanceUI();
-
-                // Починаємо прослуховування користувачів та транзакцій
                 startSync();
             }
         });
 
-        // Оновлення балансу в інтерфейсі
         function updateBalanceUI() {
             document.getElementById('user-balance').innerText = myBalance;
         }
 
-        // Запуск синхронізації в реальному часі (RULE 1, RULE 2)
         function startSync() {
             if (!currentUser) return;
 
-            // 1. Оновлення списку користувачів онлайн (всіх зареєстрованих у додатку)
             const usersQuery = collection(db, 'artifacts', appId, 'public', 'data', 'users');
             onSnapshot(usersQuery, (snapshot) => {
                 const usersListContainer = document.getElementById('users-list');
                 usersListContainer.innerHTML = '';
-                
                 let otherUsersFound = false;
 
                 snapshot.forEach((doc) => {
@@ -317,9 +269,7 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                         const isSelected = userData.uid === activeRecipientId;
                         const userEl = document.createElement('div');
                         userEl.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
-                            isSelected 
-                            ? 'bg-yellow-500/10 border-yellow-500 text-white' 
-                            : 'bg-[#151c2c] border-gray-800 hover:border-gray-700 text-gray-300'
+                            isSelected ? 'bg-yellow-500/10 border-yellow-500 text-white' : 'bg-[#151c2c] border-gray-800 hover:border-gray-700 text-gray-300'
                         }`;
                         
                         userEl.innerHTML = `
@@ -335,10 +285,7 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         `;
 
-                        userEl.addEventListener('click', () => {
-                            selectRecipient(userData.uid);
-                        });
-
+                        userEl.addEventListener('click', () => { selectRecipient(userData.uid); });
                         usersListContainer.appendChild(userEl);
                     }
                 });
@@ -347,102 +294,65 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                     usersListContainer.innerHTML = `
                         <div class="text-center py-12 text-gray-500 text-xs px-4">
                             <i data-lucide="share-2" class="w-8 h-8 mx-auto mb-2 text-gray-700"></i>
-                            Ви зараз єдиний користувач онлайн.<br>Надішліть це посилання другу, щоб розпочати обмін!
+                            Ви зараз єдиний користувач онлайн.<br>Відкрийте це посилання на іншому пристрої для тестування!
                         </div>
                     `;
                 }
                 lucide.createIcons();
-            }, (error) => {
-                console.error("Помилка синхронізації користувачів:", error);
             });
 
-            // 2. Оновлення мого власного балансу в реальному часі
             const myUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
             onSnapshot(myUserRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const prevBalance = myBalance;
                     myBalance = docSnap.data().balance;
                     updateBalanceUI();
-                    if (myBalance > prevBalance) {
-                        playCoinSound(); // Отримано нові гроші!
-                    }
+                    if (myBalance > prevBalance) playCoinSound();
                 }
             });
         }
 
-        // Вибір користувача для розмови
         let messagesUnsubscribe = null;
         function selectRecipient(uid) {
             activeRecipientId = uid;
             document.getElementById('active-recipient-name').innerText = `ID: ${uid.substring(0, 16)}...`;
             
-            // Оновлюємо стилі списку користувачів
-            startSync();
+            if (messagesUnsubscribe) messagesUnsubscribe();
 
-            // Якщо є активна підписка на попередні повідомлення - скасовуємо її
-            if (messagesUnsubscribe) {
-                messagesUnsubscribe();
-            }
-
-            // Завантажуємо транзакції між мною та обраним отримувачем
-            // RULE 2 - No Complex Queries: завантажуємо спрощений пул транзакцій і фільтруємо в оперативній пам'яті клієнта
             const txQuery = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
-            
             messagesUnsubscribe = onSnapshot(txQuery, (snapshot) => {
                 const messagesContainer = document.getElementById('chat-messages');
                 messagesContainer.innerHTML = '';
-
                 let txs = [];
+
                 snapshot.forEach((doc) => {
                     const tx = doc.data();
-                    // Фільтрація в пам'яті клієнта (тільки між мною та отримувачем в обидва боки)
-                    if (
-                        (tx.senderId === currentUser.uid && tx.receiverId === activeRecipientId) ||
-                        (tx.senderId === activeRecipientId && tx.receiverId === currentUser.uid)
-                    ) {
+                    if ((tx.senderId === currentUser.uid && tx.receiverId === activeRecipientId) || (tx.senderId === activeRecipientId && tx.receiverId === currentUser.uid)) {
                         txs.push({ id: doc.id, ...tx });
                     }
                 });
 
-                // Сортування за часом
-                txs.sort((a, b) => {
-                    const timeA = a.timestamp?.seconds || 0;
-                    const timeB = b.timestamp?.seconds || 0;
-                    return timeA - timeB;
-                });
+                txs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
 
                 if (txs.length === 0) {
-                    messagesContainer.innerHTML = `
-                        <div class="text-center text-gray-500 text-xs py-12">
-                            Спільна історія транзакцій порожня. Надішліть перше фото з ситкоїнами!
-                        </div>
-                    `;
+                    messagesContainer.innerHTML = `<div class="text-center text-gray-500 text-xs py-12">Історія транзакцій порожня. Надішліть перше фото!</div>`;
                     return;
                 }
 
                 txs.forEach((tx) => {
                     const isMyTx = tx.senderId === currentUser.uid;
                     const msgEl = document.createElement('div');
-                    msgEl.className = `flex ${isMyTx ? 'justify-end' : 'justify-start'} w-full animate-fadeIn`;
-
+                    msgEl.className = `flex ${isMyTx ? 'justify-end' : 'justify-start'} w-full`;
                     msgEl.innerHTML = `
-                        <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl overflow-hidden shadow-lg ${
-                            isMyTx 
-                            ? 'bg-[#1e293b] border border-yellow-500/30 text-white' 
-                            : 'bg-[#151c2c] border border-gray-800 text-gray-200'
-                        }">
+                        <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl overflow-hidden shadow-lg ${isMyTx ? 'bg-[#1e293b] border border-yellow-500/30 text-white' : 'bg-[#151c2c] border border-gray-800 text-gray-200'}">
                             <div class="relative min-w-[200px] aspect-video bg-black/40">
-                                <img src="${tx.photo}" class="w-full h-full object-cover" alt="Sitco-Photo">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                                
+                                <img src="${tx.photo}" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                                 <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                                    <div class="flex items-center gap-1.5 bg-yellow-500 text-black px-2.5 py-1 rounded-lg text-xs font-black shadow-lg">
-                                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                                    <div class="flex items-center gap-1.5 bg-yellow-500 text-black px-2.5 py-1 rounded-lg text-xs font-black">
                                         <span>${tx.amount} STC</span>
                                     </div>
-                                    <span class="text-[9px] text-gray-300 font-mono">
-                                        ${isMyTx ? 'Ви надіслали' : 'Отримано'}
-                                    </span>
+                                    <span class="text-[9px] text-gray-300 font-mono">${isMyTx ? 'Ви надіслали' : 'Отримано'}</span>
                                 </div>
                             </div>
                         </div>
@@ -450,18 +360,11 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                     messagesContainer.appendChild(msgEl);
                 });
 
-                // Авто-скрол вниз
-                setTimeout(() => {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }, 50);
-
+                setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 50);
                 lucide.createIcons();
-            }, (error) => {
-                console.error("Помилка завантаження повідомлень:", error);
             });
         }
 
-        // Обробка завантаження зображення та його стиснення
         const fileInput = document.getElementById('input-file');
         const previewContainer = document.getElementById('photo-preview-container');
         const previewImg = document.getElementById('photo-preview-img');
@@ -474,21 +377,14 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    // Стиснення фотографії через Canvas для збереження пам'яті (ліміт Firestore 1MB)
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 400; // Оптимальний розмір для швидкої передачі
+                    const MAX_WIDTH = 400;
                     const scale = MAX_WIDTH / img.width;
-                    
                     canvas.width = MAX_WIDTH;
                     canvas.height = img.height * scale;
-
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    // Перетворюємо у JPEG зі зниженою якістю (70%)
                     base64Photo = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    // Показуємо прев'ю
                     previewImg.src = base64Photo;
                     previewContainer.classList.remove('hidden');
                 };
@@ -497,7 +393,6 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
             reader.readAsDataURL(file);
         });
 
-        // Видалення обраного фото
         document.getElementById('btn-remove-photo').addEventListener('click', () => {
             base64Photo = null;
             previewImg.src = '';
@@ -505,59 +400,33 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
             fileInput.value = '';
         });
 
-        // Відправка транзакції (RULE 1, RULE 3)
         const btnSend = document.getElementById('btn-send');
         btnSend.addEventListener('click', async () => {
-            if (!currentUser) {
-                showNotification("Ви не авторизовані у системі!");
-                return;
-            }
-            if (!activeRecipientId) {
-                showNotification("Оберіть отримувача у лівій панелі!");
-                return;
-            }
-            if (!base64Photo) {
-                showNotification("Будь ласка, завантажте фото через кнопку «Додати фото»!");
+            if (!currentUser || !activeRecipientId || !base64Photo) {
+                showNotification("Оберіть отримувача та додайте фотографія!");
                 return;
             }
 
             const amountInput = document.getElementById('input-amount');
             const amount = parseInt(amountInput.value);
 
-            if (isNaN(amount) || amount <= 0) {
-                showNotification("Вкажіть коректну суму ситкоїнів у текстовому полі!");
+            if (isNaN(amount) || amount <= 0 || amount > myBalance) {
+                showNotification("Некоректна сума або недостатньо балансу!");
                 return;
             }
 
-            if (amount > myBalance) {
-                showNotification(`У вас недостатньо коштів! Ваш баланс: ${myBalance} STC`);
-                return;
-            }
-
-            // Блокуємо інтерфейс під час відправки
             btnSend.disabled = true;
             btnSend.innerText = "Надсилання...";
 
             try {
-                // Проводимо математику балансів
                 const newSenderBalance = myBalance - amount;
-
-                // Отримуємо поточний баланс отримувача
                 const recipientRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', activeRecipientId);
                 const recipientSnap = await getDoc(recipientRef);
                 const currentRecipientBalance = recipientSnap.exists() ? (recipientSnap.data().balance || 0) : 0;
-                const newRecipientBalance = currentRecipientBalance + amount;
 
-                // Оновлюємо дані у Firestore
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), {
-                    balance: newSenderBalance
-                });
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), { balance: newSenderBalance });
+                await updateDoc(recipientRef, { balance: currentRecipientBalance + amount });
 
-                await updateDoc(recipientRef, {
-                    balance: newRecipientBalance
-                });
-
-                // Записуємо транзакцію
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
                     senderId: currentUser.uid,
                     receiverId: activeRecipientId,
@@ -566,18 +435,13 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
                     timestamp: serverTimestamp()
                 });
 
-                // Скидаємо поля вводу
                 amountInput.value = '';
                 base64Photo = null;
                 previewContainer.classList.add('hidden');
-                previewImg.src = '';
-                fileInput.value = '';
-
-                showNotification(`Переказ на суму ${amount} STC успішно відправлено!`, false);
-
+                showNotification(`Переказ на ${amount} STC успішно відправлено!`, false);
             } catch (error) {
-                console.error("Помилка транзакції:", error);
-                showNotification("Сталася технічна помилка під час переказу.");
+                console.error(error);
+                showNotification("Помилка транзакції.");
             } finally {
                 btnSend.disabled = false;
                 btnSend.innerHTML = `<span>Надіслати</span><i data-lucide="send" class="w-4 h-4"></i>`;
@@ -585,10 +449,7 @@ document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
             }
         });
 
-        // Первинна ініціалізація іконок
         lucide.createIcons();
     </script>
 </body>
 </html>
-
-```
