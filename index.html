@@ -154,13 +154,13 @@
             firebaseConfig = JSON.parse(__firebase_config);
         } else {
             // Безпечний публічний фалбек для локального тестування та GitHub Pages
-            firebaseConfig = {
-                apiKey: "AIzaSyAs-ExampleKeyForCompilationOnly",
-                authDomain: "sitcochat-messenger.firebaseapp.com",
-                projectId: "sitcochat-messenger",
-                storageBucket: "sitcochat-messenger.appspot.com",
-                messagingSenderId: "1234567890",
-                appId: "1:12345:web:abcdef"
+            const firebaseConfig = {
+                apiKey: "AIzaSyAHCDpcU6pHKBO6QAnqivkzR4--UHWBUto",
+                authDomain: "sitpay-1ca22.firebaseapp.com",
+                projectId: "sitpay-1ca22",
+                storageBucket: "sitpay-1ca22.firebasestorage.app",
+                messagingSenderId: "803775851196",
+                appId: "1:803775851196:web:7b2a5eff07e2afe67a7eb9"
             };
         }
 
@@ -235,8 +235,33 @@
         };
 
         // Запуск авторизації
-        initAuth();
+        i// Функція, яка викликається ПРИ КЛІКУ на кнопку входу
+const handleAuthClick = async () => {
+    const btnEnter = document.getElementById('btn-enter');
 
+    // Блокуємо кнопку, щоб користувач не тиснув сто разів поспіль
+    btnEnter.disabled = true;
+    btnEnter.innerText = "Вхід...";
+
+    try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+    } catch (error) {
+        console.error("Помилка авторизації:", error);
+        showNotification("Помилка підключення. Перевірте консоль або налаштування Firebase.");
+
+        // Якщо помилка — повертаємо кнопку в початковий стан
+        btnEnter.disabled = false;
+        btnEnter.innerHTML = `<i data-lucide="shield-check" class="w-5 h-5"></i> Увійти анонімно`;
+        lucide.createIcons();
+    }
+};
+
+// Прив'язуємо клік до нашої кнопки на екрані
+document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
         // Слідкуємо за станом користувача
         onAuthStateChanged(auth, async (user) => {
             if (user) {
