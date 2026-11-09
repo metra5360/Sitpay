@@ -376,32 +376,32 @@
         </div>
         <div>
           <h1>One bank.<br>Every participant.</h1>
-          <p>The shared virtual bank for Sitcoin. The administrator connects it once; every participant then joins with a name and a password and uses the same bank.</p>
+          <p>The shared virtual bank for Sitcoin. The administrator connects it once; every participant then joins with just their name and uses the same bank.</p>
         </div>
         <ul class="feature-list">
           <li><svg class="ico"><use href="#i-check"/></svg><span>A unique account number and 100 SŦK welcome balance for every new participant.</span></li>
           <li><svg class="ico"><use href="#i-check"/></svg><span>Instant transfers recorded permanently in a single shared ledger.</span></li>
-          <li><svg class="ico"><use href="#i-check"/></svg><span>Balances can only change through atomic database functions — never from the browser.</span></li>
-          <li><svg class="ico"><use href="#i-check"/></svg><span>One administrator with server-enforced rights and full capital monitoring.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Balances can only change through protected database rules — never from the browser.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>The first account becomes the administrator, with server-enforced rights and full capital monitoring.</span></li>
         </ul>
         <div class="hero-strip"><span>1 SŦK = 5 UAH</span><span>Capital 10,000 SŦK</span><span>Welcome 100 SŦK</span></div>
       </div>
       <div class="auth-card">
-        <h2>Administrator setup</h2>
-        <p class="muted small">The administrator connects the shared bank to Supabase once. Everyone else joins with just a name and a password — no email, no Supabase account, nothing to configure.</p>
+        <h2>Bank setup (administrator only)</h2>
+        <p class="muted small">This screen is only for the person setting up the bank. It connects SitBank to Supabase once. <b>If someone sent you this to join, don’t fill this in</b> — ask them for the ready-to-use SitBank file or link instead.</p>
         <form id="setup-form" autocomplete="off">
           <div class="field">
             <label for="setup-url">Project URL</label>
-            <input id="setup-url" inputmode="url" placeholder="https://uadwcpjywlpsasojbksh.supabase.co" required>
+            <input id="setup-url" inputmode="url" placeholder="https://yourproject.supabase.co" required>
           </div>
           <div class="field">
             <label for="setup-key">Anon public key</label>
-            <input id="setup-key" type="password" placeholder="sb_publishable_Eb0-uUadkHayhZMWDY1L5Q_pylwpTwT" required>
+            <input id="setup-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6…" required>
           </div>
           <p class="form-error hidden" id="setup-error"></p>
           <button class="btn primary block" type="submit">Connect the bank</button>
         </form>
-        <p class="help" style="margin-top:14px">Run <b>sitbank-schema.sql</b> in the Supabase SQL Editor, then follow <b>SETUP.md</b>. To share the bank with your group, put these two values in the config block at the top of SitBank.html before sending the file — participants never see this screen. Never paste the service-role key here.</p>
+        <p class="help" style="margin-top:14px">Run <b>sitbank-schema.sql</b> in the Supabase SQL Editor, then follow <b>SETUP.md</b>. To share the bank with your group, put these two values in the config block at the top of SitBank.html before sending the file — participants will open it and see only the name screen. Never paste the service-role key here.</p>
       </div>
     </div>
   </div>
@@ -713,8 +713,8 @@
      start-up and remembers the values in this browser only.
      Only the public anon key belongs here — never the service-role key.
      ══════════════════════════════════════════════════════════════════ */
-  const SUPABASE_URL = '';
-  const SUPABASE_ANON_KEY = '';
+  const SUPABASE_URL = 'https://uadwcpjywlpsasojbksh.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Eb0-uUadkHayhZMWDY1L5Q_pylwpTwT';
   const CONFIG_KEY = 'sitbank.connection.v1';
 
   /* ── state & small helpers ─────────────────────────────────────── */
@@ -844,7 +844,7 @@
     if (/User already registered|already been registered/i.test(raw)) return 'That name is already registered. Add a surname or initial so your name is unique.';
     if (/Password should be at least|weak.?password/i.test(raw)) return 'Use a password with at least 6 characters.';
     if (/profiles.*does not exist|Could not find the table|schema cache/i.test(raw)) return 'The SitBank tables are missing. Run sitbank-schema.sql in the Supabase SQL editor.';
-    if (/Invalid API key|Invalid JWT|JWT expired/i.test(raw)) return 'The anon key looks wrong or expired. Check Project Settings → API.';
+    if (/Invalid API key|Invalid JWT|JWT expired/i.test(raw)) return 'The bank can’t connect: the connection key is missing, wrong, or copied incompletely. Ask the administrator to check the Project URL and the anon public key in SitBank.html (Supabase → Project Settings → API → anon public). Use the anon/public key — not the service_role key.';
     if (/Failed to fetch|NetworkError|Load failed|fetch/i.test(raw)) return 'Could not reach Supabase. Check the Project URL and your internet connection.';
     if (/violates check constraint/i.test(raw)) return 'The database rejected that value. Check the amount and try again.';
     return raw;
