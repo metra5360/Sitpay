@@ -1,455 +1,1810 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>СиткоЧат — Ситкоїн Месенджер</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: #0b0f19;
-        }
-        /* Приховуємо стандартні стрілочки у полі введення цифр */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060b16">
+<meta name="description" content="SitBank — a shared virtual bank for Sitcoin (SŦK), powered by Supabase.">
+<title>SitBank — Virtual bank of Sitcoin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --bg:#060b16; --bg-soft:#0a1220; --panel:#0d1728; --panel-2:#111f34;
+    --line:rgba(148,178,215,.14); --line-strong:rgba(148,178,215,.26);
+    --text:#eaf2ff; --muted:#8ea4c2;
+    --mint:#3ddc97; --mint-deep:#17a878; --gold:#f4c95d; --red:#ff7a85; --blue:#6aa8ff;
+    --radius:18px; --shadow:0 22px 48px -24px rgba(0,0,0,.85);
+    --sans:"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;background:
+      radial-gradient(1200px 620px at 8% -12%,rgba(23,94,74,.55),transparent 60%),
+      radial-gradient(900px 500px at 100% 0,rgba(28,58,110,.45),transparent 62%),
+      var(--bg);
+    color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{margin:0;letter-spacing:-.02em;line-height:1.25}
+  p{margin:0 0 10px}
+  a{color:var(--mint);text-decoration:none}
+  button{font-family:inherit}
+  .hidden{display:none!important}
+  .muted{color:var(--muted)}
+  .small{font-size:12.5px}
+  .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:.03em}
+  .nowrap{white-space:nowrap}
+  .ico{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+  .help{font-size:12.5px;color:var(--muted);line-height:1.55}
+  .screen{min-height:100vh;display:grid;place-items:center;padding:28px}
+
+  /* ── boot ─────────────────────────────────────────────────────── */
+  .boot-inner{display:grid;justify-items:center;gap:16px;text-align:center}
+  .spinner{width:30px;height:30px;border-radius:50%;border:2.5px solid rgba(61,220,151,.18);border-top-color:var(--mint);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── brand ────────────────────────────────────────────────────── */
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:17px;
+    color:#042116;background:linear-gradient(145deg,#5cf0ad,#0f8f63);box-shadow:0 12px 26px -12px rgba(61,220,151,.9)}
+  .logo.big{width:56px;height:56px;font-size:21px;border-radius:17px}
+  .brand-name{font-weight:750;font-size:17px;letter-spacing:-.02em}
+  .brand-sub{font-size:10.5px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+
+  /* ── connection / auth screens ────────────────────────────────── */
+  .auth-wrap{width:100%;max-width:1060px}
+  .auth-grid{display:grid;grid-template-columns:1.05fr .95fr;border:1px solid var(--line);border-radius:26px;overflow:hidden;
+    background:var(--panel);box-shadow:0 50px 120px -50px #000}
+  .auth-hero{padding:42px;display:flex;flex-direction:column;gap:26px;justify-content:space-between;
+    background:radial-gradient(760px 380px at 0 0,rgba(61,220,151,.2),transparent 62%),linear-gradient(160deg,#0b1a2a,#07111d)}
+  .auth-hero h1{font-size:clamp(28px,3.4vw,38px);margin:6px 0 10px}
+  .auth-hero p{color:#b7cbdf;max-width:38ch}
+  .feature-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:13.5px;color:#cfe0f1}
+  .feature-list li{display:flex;gap:10px;align-items:flex-start}
+  .feature-list .ico{color:var(--mint);width:17px;height:17px;margin-top:2px}
+  .hero-strip{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#a9e8cd}
+  .hero-strip span{padding:6px 10px;border:1px solid rgba(61,220,151,.28);border-radius:999px;background:rgba(61,220,151,.08)}
+  .auth-card{padding:38px;display:flex;flex-direction:column;justify-content:center}
+  .auth-card h2{font-size:22px;margin-bottom:6px}
+  .auth-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:rgba(4,10,20,.5);border:1px solid var(--line);margin:18px 0 20px}
+  .auth-tab{flex:1;padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:13.5px;font-weight:600;cursor:pointer}
+  .auth-tab.active{background:rgba(61,220,151,.14);color:#d8ffee;box-shadow:inset 0 0 0 1px rgba(61,220,151,.25)}
+  .form-note{margin-top:16px;padding:12px 14px;border-radius:12px;border:1px solid rgba(106,168,255,.28);background:rgba(106,168,255,.08);font-size:12.5px;color:#cfe3ff}
+  .form-error{margin:0 0 12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,122,133,.35);background:rgba(255,122,133,.1);color:#ffc6cb;font-size:13px}
+  @media(max-width:880px){
+    .auth-grid{grid-template-columns:1fr}
+    .auth-hero{padding:26px;gap:16px}
+    .auth-hero h1{font-size:26px}
+    .feature-list,.hero-strip{display:none}
+    .auth-card{padding:26px}
+    .auth-wrap{padding:0}
+  }
+
+  /* ── app shell ────────────────────────────────────────────────── */
+  .shell{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+  .sidebar{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;gap:24px;
+    border-right:1px solid var(--line);background:rgba(8,15,28,.72);backdrop-filter:blur(14px);z-index:30}
+  .nav{display:flex;flex-direction:column;gap:4px}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border:0;border-radius:12px;background:transparent;
+    color:var(--muted);font-size:14px;font-weight:550;cursor:pointer;text-align:left;transition:.15s}
+  .nav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  .nav-item.active{color:#dcffee;background:linear-gradient(90deg,rgba(61,220,151,.18),rgba(61,220,151,.03));
+    box-shadow:inset 0 0 0 1px rgba(61,220,151,.22)}
+  .side-foot{margin-top:auto;display:grid;gap:6px}
+  .rate-pill{margin-bottom:8px;padding:10px 12px;border-radius:12px;border:1px solid rgba(61,220,151,.24);
+    background:rgba(61,220,151,.07);color:#bff3da;font-size:12.5px;text-align:center;font-weight:600}
+  .main{min-width:0;width:100%;max-width:1240px;margin:0 auto;padding:26px 30px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+  .topbar h1{font-size:24px}
+  .topbar p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+  .topbar-right{display:flex;align-items:center;gap:10px}
+  .account-chip{display:flex;align-items:center;gap:11px;padding:8px 13px;border:1px solid var(--line);
+    border-radius:14px;background:var(--panel);min-width:0}
+  .who{min-width:0}
+  .who-name{font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+  .who-acc{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .avatar{width:38px;height:38px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;
+    color:#052117;background:linear-gradient(145deg,#79f3bd,#25b985);letter-spacing:.02em}
+  .avatar.me{box-shadow:0 0 0 2px rgba(61,220,151,.35)}
+  .icon-btn{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;border:1px solid var(--line);
+    background:rgba(255,255,255,.03);color:var(--muted);cursor:pointer}
+  .icon-btn:hover{color:var(--text);background:rgba(255,255,255,.07)}
+  @media(max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;flex-direction:row;padding:7px 6px calc(7px + env(safe-area-inset-bottom));
+      border-right:0;border-top:1px solid var(--line);background:rgba(7,13,25,.96);backdrop-filter:blur(18px)}
+    .sidebar .brand,.side-foot{display:none}
+    .nav{flex-direction:row;width:100%;justify-content:space-between;gap:0}
+    .nav-item{flex:1;flex-direction:column;gap:4px;font-size:10px;font-weight:600;padding:8px 2px;text-align:center;align-items:center}
+    .nav-item .ico{width:19px;height:19px}
+    .nav-item.active{background:rgba(61,220,151,.12);box-shadow:none}
+    .main{padding:18px 14px 108px}
+    .topbar h1{font-size:20px}
+    .topbar p{font-size:12px}
+    .who{display:none}
+    .account-chip{padding:7px}
+    .who-name{max-width:none}
+  }
+
+  /* ── cards & layout ───────────────────────────────────────────── */
+  .grid{display:grid;gap:16px}
+  .dash{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+  .split{grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr)}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+  @media(max-width:1000px){.dash{grid-template-columns:1fr}}
+  @media(max-width:980px){.split{grid-template-columns:1fr}}
+  .card{position:relative;background:linear-gradient(180deg,rgba(18,32,52,.92),rgba(11,20,34,.94));
+    border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .card h2{font-size:18px}
+  .card h3{font-size:15.5px}
+  .card h4{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 8px}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .link{border:0;background:none;color:var(--mint);font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
+  .link:hover{text-decoration:underline}
+  .view{display:none;animation:fade .25s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  /* ── buttons / forms ──────────────────────────────────────────── */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;
+    border:1px solid var(--line-strong);background:rgba(255,255,255,.045);color:var(--text);
+    font-size:14px;font-weight:650;cursor:pointer;transition:.15s;white-space:nowrap}
+  .btn:hover{background:rgba(255,255,255,.09)}
+  .btn.primary{background:linear-gradient(135deg,#4ce6a4,#14a374);border-color:transparent;color:#042116;
+    box-shadow:0 14px 30px -16px rgba(61,220,151,.9)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.danger{color:#ffd3d7;border-color:rgba(255,122,133,.35);background:rgba(255,122,133,.1)}
+  .btn.danger:hover{background:rgba(255,122,133,.18)}
+  .btn.sm{padding:8px 12px;font-size:12.5px;border-radius:10px}
+  .btn.block{width:100%}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  .field{display:grid;gap:7px;margin-bottom:14px}
+  .field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+  .field .opt{font-weight:500;text-transform:lowercase;opacity:.7}
+  input,select,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line-strong);
+    background:rgba(4,10,20,.6);color:var(--text);font-family:inherit;font-size:14.5px;outline:none;transition:.15s}
+  input::placeholder{color:#5d7290}
+  input:focus,select:focus{border-color:rgba(61,220,151,.6);box-shadow:0 0 0 3px rgba(61,220,151,.12)}
+  .amount-wrap{position:relative}
+  .amount-wrap input{padding-right:56px;font-size:17px;font-weight:650}
+  .amount-suffix{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--muted)}
+  .convert-line{margin-top:7px;font-size:12.5px;color:var(--muted)}
+  .chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.03);
+    color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+  .chip:hover{color:var(--text);border-color:rgba(61,220,151,.35)}
+  .chip.active{background:rgba(61,220,151,.15);color:#dcffee;border-color:rgba(61,220,151,.35)}
+  .resolve{font-size:12.5px;min-height:0;margin-top:2px}
+  .resolve.ok{color:#9bf0c9}
+  .resolve.warn{color:#ffc2c7}
+  .notice{padding:10px 12px;border-radius:11px;font-size:12.5px;border:1px solid var(--line);margin-top:12px}
+  .notice.err{border-color:rgba(255,122,133,.35);background:rgba(255,122,133,.08);color:#ffc6cb}
+
+  /* ── dashboard ────────────────────────────────────────────────── */
+  .balance-card{overflow:hidden;border-color:rgba(61,220,151,.26);
+    background:linear-gradient(140deg,rgba(61,220,151,.2),rgba(10,22,38,.55) 54%),radial-gradient(620px 240px at 100% 0,rgba(106,168,255,.2),transparent 66%),#0c1a2b}
+  .balance-card::after{content:"";position:absolute;right:-70px;bottom:-140px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle,rgba(61,220,151,.22),transparent 70%);pointer-events:none}
+  .balance-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .balance-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#a9e8cd;font-weight:650}
+  .balance-amount{display:flex;align-items:baseline;gap:10px;margin:12px 0 2px;font-variant-numeric:tabular-nums}
+  .balance-amount #balance-sit{font-size:clamp(34px,6vw,48px);font-weight:750;letter-spacing:-.035em;line-height:1}
+  .balance-amount .unit{font-size:15px;font-weight:700;color:#9fe9c9}
+  .balance-uah{font-size:13.5px;color:#bfe8d8}
+  .balance-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:26px;
+    padding-top:16px;border-top:1px solid rgba(255,255,255,.09)}
+  .mini-label{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:#9dd6bd;margin-bottom:4px}
+  .balance-foot .mono{font-size:15px;font-weight:650;letter-spacing:.08em}
+  .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .quick{display:grid;justify-items:start;gap:2px;padding:14px;border-radius:13px;border:1px solid var(--line);
+    background:rgba(255,255,255,.03);color:var(--text);text-align:left;cursor:pointer;transition:.15s}
+  .quick:hover{background:rgba(61,220,151,.08);border-color:rgba(61,220,151,.28)}
+  .quick .ico{color:var(--mint);margin-bottom:6px}
+  .quick b{font-size:13.5px}
+  .quick span{font-size:11.5px;color:var(--muted)}
+  .snapshot-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(148,178,215,.08);font-size:13.5px}
+  .snapshot-row:last-of-type{border-bottom:0}
+  .snapshot-row span{color:var(--muted)}
+  .snapshot-row b{font-variant-numeric:tabular-nums;text-align:right}
+
+  /* ── transactions ─────────────────────────────────────────────── */
+  .tx{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;
+    border-bottom:1px solid rgba(148,178,215,.08)}
+  .tx:last-child{border-bottom:0}
+  .tx:first-child{padding-top:2px}
+  .tx-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+    background:rgba(106,168,255,.12);color:var(--blue)}
+  .tx-icon.in{background:rgba(61,220,151,.13);color:var(--mint)}
+  .tx-icon.out{background:rgba(244,201,93,.12);color:var(--gold)}
+  .tx-main{min-width:0}
+  .tx-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx-amt{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+  .tx-amt.in{color:#7ff0c0}
+  .tx-amt.out{color:#ffdd9b}
+  .tx-bal{font-size:10.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .empty{padding:34px 10px;text-align:center;color:var(--muted)}
+  .empty b{display:block;color:var(--text);font-size:14px;margin-bottom:4px}
+  .empty .ico{width:26px;height:26px;color:#43597a;margin-bottom:10px}
+
+  /* ── participants ─────────────────────────────────────────────── */
+  .search{position:relative;min-width:220px;flex:0 0 auto}
+  .search .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);width:16px;height:16px}
+  .search input{padding-left:36px;font-size:13.5px}
+  .person{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(148,178,215,.08)}
+  .person:last-child{border-bottom:0}
+  .person-main{min-width:0;flex:1}
+  .person-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .person-acc{font-size:11.5px;color:var(--muted)}
+  .person-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  @media(max-width:520px){
+    .person{align-items:flex-start;flex-wrap:wrap}
+    .person-actions{width:100%;justify-content:flex-start;padding-left:50px}
+    .search{min-width:100%}
+  }
+
+  /* ── bank info ────────────────────────────────────────────────── */
+  .bank-hero{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    background:linear-gradient(135deg,rgba(61,220,151,.14),rgba(13,23,40,.95) 55%)}
+  .bank-mark{width:56px;height:56px;border-radius:17px;display:grid;place-items:center;font-weight:800;font-size:20px;
+    color:#042116;background:linear-gradient(145deg,#5cf0ad,#0f8f63)}
+  .bank-hero .eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#9fe9c9;font-weight:700}
+  .bank-hero h2{font-size:24px;margin:2px 0 4px}
+  .rate-badge{margin-left:auto;padding:12px 16px;border-radius:14px;border:1px solid rgba(61,220,151,.3);
+    background:rgba(61,220,151,.09);text-align:right}
+  .rate-badge span{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#9fe9c9;margin-bottom:3px}
+  .rate-badge b{font-size:16px;font-variant-numeric:tabular-nums}
+  @media(max-width:640px){.rate-badge{margin-left:0;width:100%;text-align:left}}
+  .stat{padding:16px}
+  .stat-label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:650}
+  .stat-value{font-size:21px;font-weight:750;margin-top:6px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat-sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid rgba(148,178,215,.08);font-size:13.5px}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--muted)}
+  .kv b{text-align:right;font-variant-numeric:tabular-nums}
+  .converter-out{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 16px;border-radius:13px;
+    border:1px solid rgba(61,220,151,.25);background:rgba(61,220,151,.08);margin:6px 0 12px}
+  .converter-out span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9fe9c9;font-weight:650}
+  .converter-out b{font-size:22px;font-variant-numeric:tabular-nums}
+  .mini-balance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:10px 0 4px}
+  .mini-balance span{font-size:12px;color:var(--muted)}
+  .mini-balance b{font-size:19px;font-variant-numeric:tabular-nums}
+  .rate-display{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
+  .rate-display b{font-size:24px;letter-spacing:-.02em}
+  .rate-display span{font-size:11.5px;color:var(--muted)}
+
+  /* ── badges / tags ────────────────────────────────────────────── */
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:10px;
+    font-weight:750;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+  .badge.ok{background:rgba(61,220,151,.14);color:#8bf0c4}
+  .badge.warn{background:rgba(255,122,133,.14);color:#ffb4ba}
+  .badge.info{background:rgba(106,168,255,.14);color:#a9caff}
+  .badge.gold{background:rgba(244,201,93,.14);color:#f7d98d}
+  .tag{display:inline-block;padding:3px 8px;border-radius:7px;font-size:10.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;background:rgba(106,168,255,.12);color:#a9caff;white-space:nowrap}
+  .tag.transfer{background:rgba(61,220,151,.12);color:#8bf0c4}
+  .tag.deposit{background:rgba(106,168,255,.14);color:#a9caff}
+  .tag.withdrawal{background:rgba(255,122,133,.12);color:#ffb4ba}
+  .tag.initial_grant{background:rgba(244,201,93,.12);color:#f7d98d}
+
+  /* ── tables ───────────────────────────────────────────────────── */
+  .table-wrap{overflow-x:auto;margin:0 -4px}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+  th{text-align:left;padding:9px 10px;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);font-weight:700;white-space:nowrap}
+  td{padding:11px 10px;border-bottom:1px solid rgba(148,178,215,.07);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cell-name{font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  td.actions{white-space:nowrap;text-align:right}
+  td.actions .btn{margin-left:4px}
+
+  /* ── modal / toast ────────────────────────────────────────────── */
+  #modal-root{position:relative;z-index:120}
+  .modal-wrap{position:fixed;inset:0;display:grid;place-items:center;padding:18px;background:rgba(3,7,14,.72);backdrop-filter:blur(5px)}
+  .modal{width:min(470px,100%);max-height:92vh;overflow:auto;padding:22px;border-radius:20px;
+    border:1px solid var(--line-strong);background:linear-gradient(180deg,#132239,#0a1524);box-shadow:0 40px 100px -30px #000;animation:pop .18s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+  .modal-head h3{font-size:17px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .review{display:grid;gap:0;margin:14px 0}
+  .review-row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid rgba(148,178,215,.08);font-size:13.5px}
+  .review-row:last-child{border-bottom:0}
+  .review-row span{color:var(--muted)}
+  .review-row b{text-align:right;font-variant-numeric:tabular-nums;max-width:60%}
+  .two-col{grid-template-columns:1fr 1fr}
+  @media(max-width:480px){.two-col{grid-template-columns:1fr}}
+  body.no-scroll{overflow:hidden}
+  #toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:grid;gap:9px;max-width:min(370px,calc(100vw - 32px))}
+  .toast{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;border:1px solid var(--line-strong);
+    background:#101d31;box-shadow:0 24px 50px -20px #000;font-size:13px;animation:slide .22s ease}
+  .toast .ico{width:16px;height:16px;margin-top:1px;color:var(--mint)}
+  .toast.err{border-color:rgba(255,122,133,.4)}
+  .toast.err .ico{color:var(--red)}
+  .toast.info .ico{color:var(--blue)}
+  .toast.out{opacity:0;transform:translateY(-6px);transition:.28s}
+  @keyframes slide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .fatal-card{max-width:540px;text-align:center;display:grid;justify-items:center;gap:14px}
+  .fatal-card .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
-<body class="text-gray-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+<body>
 
-    <div id="auth-screen" class="fixed inset-0 bg-[#0b0f19] z-50 flex flex-col items-center justify-center p-4 transition-all duration-500">
-        <div class="max-w-md w-full bg-[#151c2c] border border-yellow-500/20 rounded-2xl p-8 text-center shadow-2xl shadow-yellow-500/5">
-            <div class="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-500/30 animate-pulse">
-                <i data-lucide="coins" class="w-10 h-10 text-yellow-500"></i>
-            </div>
-            <h1 class="text-3xl font-bold tracking-tight text-white mb-2">СиткоЧат</h1>
-            <p class="text-gray-400 text-sm mb-8">Без слів. Тільки чисті емоції, реальні фотографії та перекази у валюті Ситкоїн (STC).</p>
-            
-            <div class="space-y-4">
-                <button id="btn-enter" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold py-4 px-6 rounded-xl transition duration-300 shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i>
-                    Увійти анонімно
-                </button>
-                <p class="text-xs text-gray-500">Анонімний вхід згенерує вам унікальний крипто-ідентифікатор у базі даних.</p>
-            </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v4h4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8"/><path d="M3 21h18"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.2-2.9 7.4-7 8.5-4.1-1.1-7-4.3-7-8.5V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20z"/><path d="M12 9v5M12 18h.01"/></symbol>
+  </defs>
+</svg>
+
+<!-- ── boot ──────────────────────────────────────────────────────── -->
+<div id="boot" class="screen">
+  <div class="boot-inner">
+    <div class="logo big">SŦ</div>
+    <div class="spinner" role="status" aria-label="Loading"></div>
+    <p id="boot-text" class="muted">Connecting to SitBank…</p>
+  </div>
+</div>
+
+<!-- ── connection setup ──────────────────────────────────────────── -->
+<section id="setup" class="screen hidden">
+  <div class="auth-wrap">
+    <div class="auth-grid">
+      <div class="auth-hero">
+        <div class="brand">
+          <div class="logo">SŦ</div>
+          <div><div class="brand-name">SitBank</div><div class="brand-sub">Sitcoin network</div></div>
         </div>
+        <div>
+          <h1>One bank.<br>Every participant.</h1>
+          <p>The shared virtual bank for Sitcoin. The administrator connects it once; every participant then joins with a name and a password and uses the same bank.</p>
+        </div>
+        <ul class="feature-list">
+          <li><svg class="ico"><use href="#i-check"/></svg><span>A unique account number and 100 SŦK welcome balance for every new participant.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Instant transfers recorded permanently in a single shared ledger.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Balances can only change through atomic database functions — never from the browser.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>One administrator with server-enforced rights and full capital monitoring.</span></li>
+        </ul>
+        <div class="hero-strip"><span>1 SŦK = 5 UAH</span><span>Capital 10,000 SŦK</span><span>Welcome 100 SŦK</span></div>
+      </div>
+      <div class="auth-card">
+        <h2>Administrator setup</h2>
+        <p class="muted small">The administrator connects the shared bank to Supabase once. Everyone else joins with just a name and a password — no email, no Supabase account, nothing to configure.</p>
+        <form id="setup-form" autocomplete="off">
+          <div class="field">
+            <label for="setup-url">Project URL</label>
+            <input id="setup-url" inputmode="url" placeholder="https://uadwcpjywlpsasojbksh.supabase.co" required>
+          </div>
+          <div class="field">
+            <label for="setup-key">Anon public key</label>
+            <input id="setup-key" type="password" placeholder="sb_publishable_Eb0-uUadkHayhZMWDY1L5Q_pylwpTwT" required>
+          </div>
+          <p class="form-error hidden" id="setup-error"></p>
+          <button class="btn primary block" type="submit">Connect the bank</button>
+        </form>
+        <p class="help" style="margin-top:14px">Run <b>sitbank-schema.sql</b> in the Supabase SQL Editor, then follow <b>SETUP.md</b>. To share the bank with your group, put these two values in the config block at the top of SitBank.html before sending the file — participants never see this screen. Never paste the service-role key here.</p>
+      </div>
     </div>
+  </div>
+</section>
 
-    <header class="bg-[#111827] border-b border-gray-800 px-4 py-4 sticky top-0 z-30 shadow-md">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-yellow-500/10 rounded-xl flex items-center justify-center border border-yellow-500/30">
-                    <i data-lucide="wallet" class="text-yellow-500 w-5 h-5"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-white tracking-wide">СиткоЧат</h1>
-                    <p class="text-[10px] text-yellow-500/80 uppercase tracking-widest font-semibold" id="my-short-id">Завантаження...</p>
-                </div>
-            </div>
-
-            <div class="bg-[#1f2937] border border-gray-700 rounded-full px-4 py-1.5 flex items-center gap-2">
-                <i data-lucide="database" class="w-4 h-4 text-yellow-500"></i>
-                <span class="text-xs text-gray-400">Мій баланс:</span>
-                <span id="user-balance" class="font-bold text-white">1000</span>
-                <span class="text-xs text-yellow-500 font-bold">STC</span>
-            </div>
+<!-- ── authentication ────────────────────────────────────────────── -->
+<section id="auth" class="screen hidden">
+  <div class="auth-wrap">
+    <div class="auth-grid">
+      <div class="auth-hero">
+        <div class="brand">
+          <div class="logo">SŦ</div>
+          <div><div class="brand-name">SitBank</div><div class="brand-sub">Sitcoin network</div></div>
         </div>
+        <div>
+          <h1>Banking,<br>shared.</h1>
+          <p>Type your name to open an account or sign in. No email, no password, no long form — you start with 100 SŦK.</p>
+        </div>
+        <ul class="feature-list">
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Just your name — that’s the whole sign-in.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Instant, final transfers between participants.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Live balance and permanent transaction history.</span></li>
+          <li><svg class="ico"><use href="#i-check"/></svg><span>Official rate: 1 SŦK = 5 UAH.</span></li>
+          <li><svg class="ico"><use href="#i-lock"/></svg><span>Money moves only through protected database rules, never from the browser.</span></li>
+        </ul>
+        <div class="hero-strip"><span>Sitcoin · SŦK</span><span>Capital 10,000 SŦK</span></div>
+      </div>
+      <div class="auth-card">
+        <h2>Welcome to SitBank</h2>
+        <p class="muted small">Enter the name you use in SitBank. Pick a clear, unique name — anyone who knows that exact name can open its account.</p>
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" type="button" data-auth-tab="login" role="tab">Sign in</button>
+          <button class="auth-tab" type="button" data-auth-tab="register" role="tab">Create account</button>
+        </div>
+        <form id="login-form">
+          <div class="field"><label for="login-name">Your name</label><input id="login-name" autocomplete="username" placeholder="Alice Novak" maxlength="60" required></div>
+          <p class="form-error hidden" id="login-error"></p>
+          <button class="btn primary block" type="submit">Sign in</button>
+        </form>
+        <form id="register-form" class="hidden">
+          <div class="field"><label for="reg-name">Your name</label><input id="reg-name" autocomplete="username" placeholder="Alice Novak" maxlength="60" required></div>
+          <p class="form-error hidden" id="reg-error"></p>
+          <button class="btn primary block" type="submit">Open my account</button>
+          <p class="help" style="margin-top:10px">Include a surname or initial so your name is unique. There is no password, so keep the name clear for your group. Every new participant receives 100 SŦK and a unique account number.</p>
+        </form>
+        <div class="form-note hidden" id="auth-note"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── fatal ─────────────────────────────────────────────────────── -->
+<section id="fatal" class="screen hidden">
+  <div class="card fatal-card">
+    <div class="logo big">!</div>
+    <h2 id="fatal-title">Something went wrong</h2>
+    <p class="muted" id="fatal-text"></p>
+    <div class="row">
+      <button class="btn primary" data-action="retry">Try again</button>
+      <button class="btn" data-action="reset-config">Change connection</button>
+      <button class="btn" data-action="logout">Sign out</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── application ───────────────────────────────────────────────── -->
+<div id="app" class="shell hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">SŦ</div>
+      <div><div class="brand-name">SitBank</div><div class="brand-sub">Sitcoin network</div></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Main navigation">
+      <button class="nav-item active" data-action="nav" data-view="dashboard"><svg class="ico"><use href="#i-home"/></svg><span>Dashboard</span></button>
+      <button class="nav-item" data-action="nav" data-view="transfer"><svg class="ico"><use href="#i-send"/></svg><span>Transfer</span></button>
+      <button class="nav-item" data-action="nav" data-view="history"><svg class="ico"><use href="#i-history"/></svg><span>History</span></button>
+      <button class="nav-item" data-action="nav" data-view="participants"><svg class="ico"><use href="#i-users"/></svg><span>Participants</span></button>
+      <button class="nav-item" data-action="nav" data-view="bank"><svg class="ico"><use href="#i-bank"/></svg><span>Bank</span></button>
+      <button class="nav-item hidden" id="nav-admin" data-action="nav" data-view="admin"><svg class="ico"><use href="#i-shield"/></svg><span>Admin</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="rate-pill" id="side-rate">1 SŦK = 5 ₴</div>
+      <button class="nav-item hidden" id="nav-connection" data-action="reset-config"><svg class="ico"><use href="#i-plug"/></svg><span>Connection</span></button>
+      <button class="nav-item" data-action="logout"><svg class="ico"><use href="#i-out"/></svg><span>Sign out</span></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="page-title">Dashboard</h1>
+        <p id="page-sub">Your money at a glance</p>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" data-action="refresh" title="Refresh data" aria-label="Refresh data"><svg class="ico"><use href="#i-refresh"/></svg></button>
+        <div class="account-chip">
+          <div class="avatar" id="chip-avatar">S</div>
+          <div class="who">
+            <div class="who-name" id="chip-name">—</div>
+            <div class="who-acc" id="chip-acc">—</div>
+          </div>
+        </div>
+      </div>
     </header>
 
-    <main class="flex-1 max-w-4xl w-full mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <section class="bg-[#111827] border border-gray-800 rounded-2xl p-4 flex flex-col h-[400px] md:h-auto">
-            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <i data-lucide="users" class="w-4 h-4 text-yellow-500"></i>
-                Отримувачі в мережі
-            </h2>
-            <div id="users-list" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                <div class="text-center py-8 text-gray-500 text-sm">Пошук активних користувачів...</div>
+    <main id="views">
+      <!-- dashboard -->
+      <section class="view active" id="view-dashboard">
+        <div class="grid dash">
+          <div class="card balance-card">
+            <div class="balance-head">
+              <span class="balance-label">Available balance</span>
+              <span id="balance-status"></span>
             </div>
-        </section>
-
-        <section class="md:col-span-2 bg-[#111827] border border-gray-800 rounded-2xl flex flex-col h-[500px] md:h-[600px] overflow-hidden">
-            
-            <div class="bg-[#1f2937]/50 px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                <span class="text-xs text-gray-400">Діалог з:</span>
-                <span id="active-recipient-name" class="font-bold text-yellow-500 text-sm">Виберіть отримувача ліворуч</span>
+            <div class="balance-amount"><span id="balance-sit">0.00</span><span class="unit">SŦK</span></div>
+            <div class="balance-uah">≈ <span id="balance-uah">0.00</span> UAH at the official rate</div>
+            <div class="balance-foot">
+              <div>
+                <div class="mini-label">Account number</div>
+                <div class="mono" id="balance-account">—</div>
+              </div>
+              <button class="btn sm" type="button" data-action="copy-account"><svg class="ico"><use href="#i-copy"/></svg>Copy</button>
             </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Quick actions</h3></div>
+            <div class="quick-grid">
+              <button class="quick" data-action="nav" data-view="transfer"><svg class="ico"><use href="#i-send"/></svg><b>Send money</b><span>To any participant</span></button>
+              <button class="quick" data-action="nav" data-view="participants"><svg class="ico"><use href="#i-users"/></svg><b>Participants</b><span>Find an account</span></button>
+              <button class="quick" data-action="nav" data-view="history"><svg class="ico"><use href="#i-history"/></svg><b>History</b><span>All movements</span></button>
+              <button class="quick" data-action="nav" data-view="bank"><svg class="ico"><use href="#i-bank"/></svg><b>Bank info</b><span>Rate &amp; capital</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="grid dash" style="margin-top:16px">
+          <div class="card">
+            <div class="card-head"><h3>Recent activity</h3><button class="link" data-action="nav" data-view="history">View all</button></div>
+            <div id="dash-tx"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Bank snapshot</h3><span class="badge info">SŦK</span></div>
+            <div class="snapshot-row"><span>Official rate</span><b id="snapshot-rate">1 SŦK = 5 ₴</b></div>
+            <div class="snapshot-row"><span>Bank reserve</span><b id="snapshot-reserve">—</b></div>
+            <div class="snapshot-row"><span>In circulation</span><b id="snapshot-circ">—</b></div>
+            <div class="snapshot-row"><span>Participants</span><b id="snapshot-people">—</b></div>
+            <p class="help" id="snapshot-note" style="margin-top:12px"></p>
+          </div>
+        </div>
+      </section>
 
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                <div class="text-center text-gray-500 text-sm py-12">
-                    <i data-lucide="image" class="w-12 h-12 mx-auto mb-3 text-gray-700"></i>
-                    Виберіть користувача та надішліть йому перше фото-транзакцію
+      <!-- transfer -->
+      <section class="view" id="view-transfer">
+        <div class="grid split">
+          <div class="card">
+            <div class="card-head"><div><h2>Send Sitcoin</h2><p class="muted small" style="margin:2px 0 0">Instant, final and permanently recorded.</p></div></div>
+            <form id="transfer-form" autocomplete="off">
+              <div class="field">
+                <label for="t-account">Recipient account number</label>
+                <input id="t-account" inputmode="numeric" placeholder="4001 000 002" maxlength="20" required>
+                <div class="resolve" id="t-resolved"></div>
+              </div>
+              <div class="field">
+                <label for="t-amount">Amount (SŦK)</label>
+                <div class="amount-wrap">
+                  <input id="t-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required>
+                  <span class="amount-suffix">SŦK</span>
                 </div>
-            </div>
-
-            <div class="p-4 bg-[#111827] border-t border-gray-800 space-y-3">
-                <div id="photo-preview-container" class="hidden relative w-24 h-24 rounded-lg overflow-hidden border border-yellow-500/40">
-                    <img id="photo-preview-img" src="" class="w-full h-full object-cover">
-                    <button id="btn-remove-photo" class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white rounded-full p-1 transition">
-                        <i data-lucide="x" class="w-3 h-3"></i>
-                    </button>
+                <div class="convert-line">≈ <span id="t-uah">0.00</span> UAH</div>
+                <div class="chip-row">
+                  <button type="button" class="chip" data-action="amount" data-value="25">25</button>
+                  <button type="button" class="chip" data-action="amount" data-value="50">50</button>
+                  <button type="button" class="chip" data-action="amount" data-value="100">100</button>
+                  <button type="button" class="chip" data-action="amount" data-value="max">Max</button>
                 </div>
+              </div>
+              <div class="field">
+                <label for="t-desc">Description <span class="opt">optional</span></label>
+                <input id="t-desc" maxlength="80" placeholder="Dinner, rent, gift…">
+              </div>
+              <p class="notice err hidden" id="t-blocked-note"><b>Account blocked.</b> Transfers are disabled until the administrator unblocks your account.</p>
+              <button class="btn primary block" id="t-submit" type="submit"><svg class="ico"><use href="#i-send"/></svg>Review transfer</button>
+            </form>
+          </div>
+          <aside class="card">
+            <h3>Your account</h3>
+            <div class="mini-balance"><span>Available balance</span><b id="t-balance">—</b></div>
+            <div class="divider"></div>
+            <h4>Official rate</h4>
+            <div class="rate-display"><b id="t-rate">5</b><span>UAH per 1 SŦK</span></div>
+            <p class="help">Transfers run inside one database transaction: both balances and the ledger row commit together or not at all. Retries reuse a request key, so a double click can never send money twice.</p>
+          </aside>
+        </div>
+      </section>
 
-                <div class="flex flex-col sm:flex-row items-center gap-3">
-                    <label class="w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2 bg-[#1f2937] hover:bg-gray-700 text-gray-300 font-medium py-3.5 px-5 rounded-xl transition duration-200 border border-gray-700 text-sm shrink-0">
-                        <i data-lucide="camera" class="w-5 h-5 text-yellow-500"></i>
-                        <span>Додати photo</span>
-                        <input type="file" id="input-file" accept="image/*" class="hidden">
-                    </label>
-
-                    <div class="relative w-full">
-                        <input 
-                            type="number" 
-                            id="input-amount" 
-                            placeholder="Сума Ситкоїнів (STC)" 
-                            min="1"
-                            class="w-full bg-[#151c2c] border border-gray-700 focus:border-yellow-500 rounded-xl py-3.5 pl-4 pr-16 outline-none text-white font-bold placeholder-gray-500 transition text-sm"
-                            onkeypress="return event.charCode >= 48 && event.charCode <= 57" 
-                        >
-                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-yellow-500 select-none">
-                            STC
-                        </div>
-                    </div>
-
-                    <button id="btn-send" class="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3.5 px-6 rounded-xl transition duration-200 flex items-center justify-center gap-2 shrink-0">
-                        <span class="text-sm">Надіслати</span>
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                    </button>
-                </div>
+      <!-- history -->
+      <section class="view" id="view-history">
+        <div class="card">
+          <div class="card-head">
+            <div><h2>Transaction history</h2><p class="muted small" style="margin:2px 0 0" id="history-count">—</p></div>
+            <div class="chip-row" style="margin-top:0" id="history-filters">
+              <button class="chip active" data-action="filter" data-filter="all">All</button>
+              <button class="chip" data-action="filter" data-filter="in">Incoming</button>
+              <button class="chip" data-action="filter" data-filter="out">Outgoing</button>
+              <button class="chip" data-action="filter" data-filter="admin">Bank</button>
             </div>
-        </section>
+          </div>
+          <div id="history-list"></div>
+        </div>
+      </section>
+
+      <!-- participants -->
+      <section class="view" id="view-participants">
+        <div class="card">
+          <div class="card-head">
+            <div><h2>Participants</h2><p class="muted small" style="margin:2px 0 0" id="participants-count">—</p></div>
+            <div class="search">
+              <svg class="ico"><use href="#i-search"/></svg>
+              <input id="participant-search" placeholder="Search name or account" aria-label="Search participants">
+            </div>
+          </div>
+          <div id="participants-list"></div>
+        </div>
+      </section>
+
+      <!-- bank information -->
+      <section class="view" id="view-bank">
+        <div class="card bank-hero">
+          <div class="bank-mark">SŦ</div>
+          <div>
+            <div class="eyebrow">Official virtual bank</div>
+            <h2 id="bank-name">SitBank</h2>
+            <p class="muted small" id="bank-note" style="margin:0;max-width:62ch"></p>
+          </div>
+          <div class="rate-badge"><span>Official exchange rate</span><b id="bank-rate">1 SŦK = 5 ₴</b></div>
+        </div>
+        <div class="grid stats" style="margin-top:16px">
+          <div class="card stat"><div class="stat-label">Currency</div><div class="stat-value" id="bank-currency">Sitcoin (SŦK)</div><div class="stat-sub">Virtual currency of SitBank</div></div>
+          <div class="card stat"><div class="stat-label">Initial bank capital</div><div class="stat-value" id="bank-capital">10,000.00 SŦK</div><div class="stat-sub" id="bank-capital-uah">—</div></div>
+          <div class="card stat"><div class="stat-label">Initial participant balance</div><div class="stat-value" id="bank-initial">100.00 SŦK</div><div class="stat-sub" id="bank-initial-uah">—</div></div>
+          <div class="card stat"><div class="stat-label">Bank reserve</div><div class="stat-value" id="bank-reserve">—</div><div class="stat-sub">Unissued capital</div></div>
+          <div class="card stat"><div class="stat-label">In circulation</div><div class="stat-value" id="bank-circ">—</div><div class="stat-sub">Held by participants</div></div>
+        </div>
+        <div class="grid split" style="margin-top:16px">
+          <div class="card">
+            <h3>Currency converter</h3>
+            <p class="help" style="margin:2px 0 14px">Conversions use the official rate maintained by the administrator.</p>
+            <div class="field">
+              <label for="conv-input">Amount in Sitcoin (SŦK)</label>
+              <div class="amount-wrap">
+                <input id="conv-input" type="number" min="0" step="0.01" value="100">
+                <span class="amount-suffix">SŦK</span>
+              </div>
+            </div>
+            <div class="converter-out"><span>Equals in hryvnia</span><b id="conv-output">500.00 UAH</b></div>
+            <p class="help" id="conv-note">1 SŦK = 5.00 UAH</p>
+          </div>
+          <div class="card">
+            <h3>Official information</h3>
+            <div class="kv"><span>Bank name</span><b id="bank-name-2">SitBank</b></div>
+            <div class="kv"><span>Currency</span><b id="bank-code">SŦK</b></div>
+            <div class="kv"><span>Exchange rate</span><b id="bank-rate-2">1 SŦK = 5 ₴</b></div>
+            <div class="kv"><span>Initial capital</span><b id="bank-capital-2">10,000.00 SŦK</b></div>
+            <div class="kv"><span>Welcome balance</span><b id="bank-initial-2">100.00 SŦK</b></div>
+            <div class="kv"><span>Information updated</span><b id="bank-updated">—</b></div>
+            <p class="help" style="margin-top:12px">Sitcoin is a virtual currency used only inside this banking system. It has no cash value outside SitBank.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- administration -->
+      <section class="view" id="view-admin">
+        <div id="admin-denied" class="card hidden">
+          <h2>Administrator access only</h2>
+          <p class="muted">This area is reserved for the bank administrator. Rights are enforced by the database.</p>
+        </div>
+        <div id="admin-content">
+          <div class="grid stats" id="admin-stats"></div>
+          <div class="grid split" style="margin-top:16px">
+            <div class="card">
+              <div class="card-head"><div><h3>All accounts</h3><p class="muted small" id="admin-accounts-count" style="margin:2px 0 0">—</p></div></div>
+              <div class="table-wrap"><table id="admin-accounts"></table></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Bank settings</h3><button class="btn sm" data-action="edit-bank">Edit</button></div>
+              <div id="admin-bank-summary"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="card-head"><h3>All transactions</h3><span class="muted small">Latest 200</span></div>
+            <div class="table-wrap"><table id="admin-tx"></table></div>
+          </div>
+        </div>
+      </section>
     </main>
+  </div>
+</div>
 
-    <div id="toast" class="fixed bottom-6 right-6 bg-red-900/90 border border-red-500 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
-        <i data-lucide="alert-triangle" class="text-red-400 w-5 h-5"></i>
-        <span id="toast-message" class="text-sm font-medium">Помилка мережі</span>
-    </div>
+<div id="modal-root" class="hidden"></div>
+<div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<script>
+(function () {
+  'use strict';
 
-        const appId = 'sitcochat-global';
-        
-        // СЮДИ ВСТАВ СВОЇ КЛЮЧІ З FIREBASE:
-        const firebaseConfig = {
-          apiKey: "AIzaSyAHCDpcU6pHKBO6QAnqivkzR4--UHWBUto",
-          authDomain: "sitpay-1ca22.firebaseapp.com",
-          projectId: "sitpay-1ca22",
-          storageBucket: "sitpay-1ca22.firebasestorage.app",
-          messagingSenderId: "803775851196",
-          appId: "1:803775851196:web:7b2a5eff07e2afe67a7eb9"
-        };
+  /* ══════════════════════════════════════════════════════════════════
+     CONNECTION CONFIGURATION
+     Optional: hard-code your project below so this file is plug-and-play.
+     If both are empty, SitBank shows the "Connect the bank" screen at
+     start-up and remembers the values in this browser only.
+     Only the public anon key belongs here — never the service-role key.
+     ══════════════════════════════════════════════════════════════════ */
+  const SUPABASE_URL = '';
+  const SUPABASE_ANON_KEY = '';
+  const CONFIG_KEY = 'sitbank.connection.v1';
 
-        // Ініціалізація Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+  /* ── state & small helpers ─────────────────────────────────────── */
+  const state = {
+    sb: null, session: null, user: null, profile: null, bank: null,
+    participants: [], transactions: [], allTransactions: [], stats: null,
+    view: 'dashboard', filter: 'all', query: '',
+    bootedFor: null, transferKey: null, pendingTransfer: null,
+    adminKey: null, confirmRun: null, channel: null,
+    refreshTimer: null, refreshing: false
+  };
 
-        // Стан додатку
-        let currentUser = null;
-        let activeRecipientId = null;
-        let myBalance = 1000;
-        let base64Photo = null;
+  const $ = function (id) { return document.getElementById(id); };
+  const nf = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rounds = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
+  const rate = function () { return Number(state.bank && state.bank.rate_uah) || 5; };
+  const cur = function () { return (state.bank && state.bank.currency_code) || 'SŦK'; };
+  const money = function (v) { return nf.format(Number(v || 0)); };
+  const uah = function (v) { return nf.format(Number(v || 0) * rate()); };
+  const esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  const trim = function (v) { return String(v == null ? '' : v).trim(); };
+  const digits = function (v) { return String(v == null ? '' : v).replace(/\D+/g, ''); };
+  const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
-        // Звуки
-        const coinSynth = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "sine" },
-            envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.8 }
-        }).toDestination();
+  function initials(name) {
+    const parts = trim(name).split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'S';
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  function newKey() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      const b = new Uint8Array(16);
+      crypto.getRandomValues(b);
+      return Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    } catch (e) {
+      return 'k' + Date.now() + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+  }
+  // Names are the only login. A stable, private internal email is derived from
+  // the name so Supabase Auth can be used without ever asking for an email.
+  const TRANSLIT = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ie',
+    'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'i', 'й': 'i', 'к': 'k', 'л': 'l',
+    'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'iu',
+    'я': 'ia', '’': '', 'ʼ': '', "'": ''
+  };
+  function loginSlug(name) {
+    const raw = trim(name).toLowerCase();
+    let out = '';
+    Array.from(raw).forEach(function (ch) {
+      out += Object.prototype.hasOwnProperty.call(TRANSLIT, ch) ? TRANSLIT[ch] : ch;
+    });
+    out = out.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    return out.replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').replace(/\.{2,}/g, '.').slice(0, 48);
+  }
+  function loginKey(name) {
+    const raw = trim(name);
+    if (raw.indexOf('@') !== -1) return raw.toLowerCase();
+    const slug = loginSlug(raw);
+    // A reserved domain: Supabase needs an address-shaped login label, but with
+    // confirmation off it never sends mail and participants never see this.
+    if (slug) return slug + '@example.com';
+    let h = 2166136261;
+    for (let i = 0; i < raw.length; i++) {
+      h ^= raw.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return 'user-' + (h >>> 0).toString(36) + '@example.com';
+  }
+  // Name-only access: Supabase still requires a sign-in secret, so SitBank
+  // creates a stable internal one from the name. There is no password to type,
+  // which also means anyone who knows the exact name can enter that account.
+  function internalSecret(name) {
+    const s = 'sitbank.name.only.v1|' + loginKey(name);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    let h2 = 0x9e3779b9;
+    for (let j = s.length - 1; j >= 0; j--) { h2 ^= s.charCodeAt(j); h2 = Math.imul(h2, 0x85ebca6b); }
+    return 'Sb' + (h >>> 0).toString(36) + (h2 >>> 0).toString(36) + '!9';
+  }
 
-        function playCoinSound() {
-            try {
-                if (Tone.context.state !== 'running') Tone.start();
-                const now = Tone.now();
-                coinSynth.triggerAttackRelease("C6", "16n", now);
-                coinSynth.triggerAttackRelease("E6", "16n", now + 0.08);
-                coinSynth.triggerAttackRelease("G6", "8n", now + 0.16);
-            } catch(e) {}
-        }
+  function circulation() {
+    return state.participants.reduce(function (sum, p) { return sum + Number(p.balance || 0); }, 0);
+  }
 
-        function playErrorSound() {
-            try {
-                const now = Tone.now();
-                const errorSynth = new Tone.Synth().toDestination();
-                errorSynth.triggerAttackRelease("A3", "8n", now);
-            } catch(e) {}
-        }
+  const ERROR_TEXT = {
+    AUTH_REQUIRED: 'Your session has expired. Please sign in again.',
+    INVALID_AMOUNT: 'Enter an amount greater than zero.',
+    INSUFFICIENT_FUNDS: 'There is not enough Sitcoin in the account for this operation.',
+    SELF_TRANSFER: 'You cannot transfer money to your own account.',
+    RECIPIENT_REQUIRED: 'Enter the recipient account number.',
+    RECIPIENT_NOT_FOUND: 'No participant has that account number.',
+    RECIPIENT_BLOCKED: 'That account is blocked and cannot receive money.',
+    ACCOUNT_BLOCKED: 'Your account is blocked. Contact the administrator.',
+    ACCOUNT_NOT_FOUND: 'Account not found.',
+    NOT_ADMIN: 'This action is reserved for the administrator.',
+    CANNOT_BLOCK_SELF: 'You cannot block your own administrator account.',
+    INVALID_RATE: 'The exchange rate must be greater than zero.',
+    BALANCE_LIMIT: 'That would exceed the maximum balance allowed for an account.',
+    INVALID_REQUEST_KEY: 'This request could not be verified. Reload the page and try again.',
+    PROFILE_NOT_FOUND: 'No SitBank account was found for this login. Run the SQL schema, then sign up again.',
+    BANK_SETUP_MISSING: 'The bank settings row is missing. Run sitbank-schema.sql in the Supabase SQL editor.',
+    USER_NOT_FOUND: 'No user with that email exists yet.',
+    INVALID_KIND: 'Unknown operation.'
+  };
+  function friendly(err) {
+    const raw = (err && (err.message || err.error_description || err.msg || err.hint)) || String(err || 'Unknown error');
+    const keys = Object.keys(ERROR_TEXT);
+    for (let i = 0; i < keys.length; i++) {
+      if (raw.indexOf(keys[i]) !== -1) return ERROR_TEXT[keys[i]];
+    }
+    if (/Invalid login credentials/i.test(raw)) return 'No SitBank account was found for that name. Check the spelling, or create an account first. If this account was made in an older version that used a password, ask the administrator to remove it in Supabase and create it again.';
+    if (/email.*(invalid|is not valid)|invalid.*email|validation_failed/i.test(raw)) return 'SitBank could not create the account because the sign-in system rejected the internal login label. Reload the page and try again; if it keeps happening, the administrator should check the project sign-in settings.';
+    if (/email rate limit exceeded|over_email_send_rate_limit/i.test(raw)) return 'Supabase tried to send a confirmation email and hit its mail limit. The administrator only needs to turn off Confirm email once — after that SitBank sends no email at all.';
+    if (/Email not confirmed/i.test(raw)) return 'This bank still asks for email confirmation. The administrator must turn it off, because SitBank accounts use names only.';
+    if (/User already registered|already been registered/i.test(raw)) return 'That name is already registered. Add a surname or initial so your name is unique.';
+    if (/Password should be at least|weak.?password/i.test(raw)) return 'Use a password with at least 6 characters.';
+    if (/profiles.*does not exist|Could not find the table|schema cache/i.test(raw)) return 'The SitBank tables are missing. Run sitbank-schema.sql in the Supabase SQL editor.';
+    if (/Invalid API key|Invalid JWT|JWT expired/i.test(raw)) return 'The anon key looks wrong or expired. Check Project Settings → API.';
+    if (/Failed to fetch|NetworkError|Load failed|fetch/i.test(raw)) return 'Could not reach Supabase. Check the Project URL and your internet connection.';
+    if (/violates check constraint/i.test(raw)) return 'The database rejected that value. Check the amount and try again.';
+    return raw;
+  }
 
-        function showNotification(msg, isError = true) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-message');
-            toastMsg.innerText = msg;
-            if (isError) {
-                toast.className = "fixed bottom-6 right-6 bg-red-950/90 border border-red-500 text-white px-6 py-3 rounded-xl shadow-2xl transform transition-all duration-300 z-50 flex items-center gap-3 opacity-100 translate-y-0";
-                playErrorSound();
-            } else {
-                toast.className = "fixed bottom-6 right-6 bg-emerald-950/90 border border-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl transform transition-all duration-300 z-50 flex items-center gap-3 opacity-100 translate-y-0";
-                playCoinSound();
-            }
-            setTimeout(() => {
-                toast.className = "fixed bottom-6 right-6 bg-red-900/90 border border-red-500 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3";
-            }, 4000);
-        }
+  /* ── screens, toast, modal ─────────────────────────────────────── */
+  const SCREENS = ['boot', 'setup', 'auth', 'app', 'fatal'];
+  function showOnly(id) {
+    SCREENS.forEach(function (name) {
+      const el = $(name);
+      if (el) el.classList.toggle('hidden', name !== id);
+    });
+  }
+  function toast(message, type) {
+    const wrap = $('toast-wrap');
+    if (!wrap) return;
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type || 'ok');
+    el.innerHTML = '<svg class="ico"><use href="#' + (type === 'err' ? 'i-alert' : type === 'info' ? 'i-refresh' : 'i-check') + '"/></svg><div>' + esc(message) + '</div>';
+    wrap.appendChild(el);
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 300);
+    }, 4200);
+  }
+  function openModal(html) {
+    const root = $('modal-root');
+    root.innerHTML = '<div class="modal-wrap"><div class="modal" role="dialog" aria-modal="true">' + html + '</div></div>';
+    root.classList.remove('hidden');
+    document.body.classList.add('no-scroll');
+    const first = root.querySelector('input,select,textarea');
+    if (first) setTimeout(function () { try { first.focus(); } catch (e) {} }, 60);
+  }
+  function closeModal() {
+    const root = $('modal-root');
+    root.innerHTML = '';
+    root.classList.add('hidden');
+    document.body.classList.remove('no-scroll');
+    state.confirmRun = null;
+  }
+  function confirmDialog(opts) {
+    state.confirmRun = opts.run;
+    openModal(
+      '<div class="modal-head"><h3>' + esc(opts.title) + '</h3>' +
+      '<button class="icon-btn" data-action="close-modal" aria-label="Close">✕</button></div>' +
+      '<p class="muted">' + opts.body + '</p>' +
+      '<div class="modal-actions"><button class="btn" data-action="close-modal">Cancel</button>' +
+      '<button class="btn ' + (opts.danger ? 'danger' : 'primary') + '" data-action="confirm-run">' + esc(opts.label) + '</button></div>'
+    );
+  }
+  async function runConfirm(btn) {
+    const fn = state.confirmRun;
+    if (!fn) return;
+    btn.disabled = true;
+    try { await fn(); }
+    catch (err) { toast(friendly(err), 'err'); btn.disabled = false; }
+  }
+  function setBusy(btn, on, label) {
+    if (!btn) return;
+    if (on) {
+      btn.dataset.label = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = esc(label || 'Working…');
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.label) btn.innerHTML = btn.dataset.label;
+    }
+  }
+  function formError(id, message) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('hidden', !message);
+  }
 
-        // Обробник натискання на кнопку "Увійти анонімно"
-        const handleAuthClick = async () => {
-            const btnEnter = document.getElementById('btn-enter');
-            btnEnter.disabled = true;
-            btnEnter.innerText = "Підключення...";
-            
-            try {
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Помилка авторизації:", error);
-                showNotification("Помилка Firebase. Перевірте правильність введених ключів у коді.");
-                btnEnter.disabled = false;
-                btnEnter.innerHTML = `<i data-lucide="shield-check" class="w-5 h-5"></i> Увійти анонімно`;
-                lucide.createIcons();
-            }
-        };
+  const VIEW_META = {
+    dashboard: ['Dashboard', 'Your money at a glance'],
+    transfer: ['Send money', 'Move Sitcoin to another participant'],
+    history: ['Transaction history', 'Every movement on your account'],
+    participants: ['Participants', 'Everyone banking with SitBank'],
+    bank: ['Bank information', 'Official rates, capital and currency'],
+    admin: ['Administration', 'Bank-wide accounts and controls']
+  };
 
-        // Навішуємо подію кліку на кнопку входу
-        document.getElementById('btn-enter').addEventListener('click', handleAuthClick);
+  /* ── connection & authentication ───────────────────────────────── */
+  function readConfig() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}') || {}; } catch (e) { saved = {}; }
+    return {
+      url: trim(saved.url || SUPABASE_URL).replace(/\/+$/, ''),
+      key: trim(saved.key || SUPABASE_ANON_KEY)
+    };
+  }
 
-        // Коли користувач успішно увійшов
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('auth-screen').classList.add('opacity-0', 'pointer-events-none');
-                
-                const shortId = `ID: ${user.uid.substring(0, 12)}...`;
-                document.getElementById('my-short-id').innerText = shortId;
+  async function connect(cfg) {
+    showOnly('boot');
+    $('boot-text').textContent = 'Connecting to SitBank…';
+    if (!window.supabase || !window.supabase.createClient) {
+      showFatal('Supabase library unavailable', 'The Supabase client could not be loaded. Check your internet connection and reload this file.');
+      return;
+    }
+    try {
+      state.sb = window.supabase.createClient(cfg.url, cfg.key, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+      });
+      const sessionResult = await state.sb.auth.getSession();
+      if (sessionResult.error) throw sessionResult.error;
 
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-                const userDoc = await getDoc(userRef);
-
-                if (!userDoc.exists()) {
-                    await setDoc(userRef, {
-                        uid: user.uid,
-                        balance: 1000,
-                        lastSeen: serverTimestamp()
-                    });
-                    myBalance = 1000;
-                } else {
-                    myBalance = userDoc.data().balance || 1000;
-                }
-                updateBalanceUI();
-                startSync();
-            }
-        });
-
-        function updateBalanceUI() {
-            document.getElementById('user-balance').innerText = myBalance;
-        }
-
-        function startSync() {
-            if (!currentUser) return;
-
-            const usersQuery = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            onSnapshot(usersQuery, (snapshot) => {
-                const usersListContainer = document.getElementById('users-list');
-                usersListContainer.innerHTML = '';
-                let otherUsersFound = false;
-
-                snapshot.forEach((doc) => {
-                    const userData = doc.data();
-                    if (userData.uid !== currentUser.uid) {
-                        otherUsersFound = true;
-                        const isSelected = userData.uid === activeRecipientId;
-                        const userEl = document.createElement('div');
-                        userEl.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
-                            isSelected ? 'bg-yellow-500/10 border-yellow-500 text-white' : 'bg-[#151c2c] border-gray-800 hover:border-gray-700 text-gray-300'
-                        }`;
-                        
-                        userEl.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
-                                    <i data-lucide="user" class="w-4 h-4 ${isSelected ? 'text-yellow-500' : 'text-gray-400'}"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold font-mono">${userData.uid.substring(0, 16)}...</p>
-                                    <p class="text-[10px] text-gray-500">Баланс: ${userData.balance || 0} STC</p>
-                                </div>
-                            </div>
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        `;
-
-                        userEl.addEventListener('click', () => { selectRecipient(userData.uid); });
-                        usersListContainer.appendChild(userEl);
-                    }
-                });
-
-                if (!otherUsersFound) {
-                    usersListContainer.innerHTML = `
-                        <div class="text-center py-12 text-gray-500 text-xs px-4">
-                            <i data-lucide="share-2" class="w-8 h-8 mx-auto mb-2 text-gray-700"></i>
-                            Ви зараз єдиний користувач онлайн.<br>Відкрийте це посилання на іншому пристрої для тестування!
-                        </div>
-                    `;
-                }
-                lucide.createIcons();
+      state.sb.auth.onAuthStateChange(function (event, session) {
+        if (event === 'SIGNED_OUT') { signedOut(); return; }
+        if (session && session.user) {
+          setTimeout(function () {
+            handleSession(session).catch(function (err) {
+              showFatal('We could not open your account', friendly(err));
             });
-
-            const myUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-            onSnapshot(myUserRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const prevBalance = myBalance;
-                    myBalance = docSnap.data().balance;
-                    updateBalanceUI();
-                    if (myBalance > prevBalance) playCoinSound();
-                }
-            });
+          }, 0);
         }
+      });
 
-        let messagesUnsubscribe = null;
-        function selectRecipient(uid) {
-            activeRecipientId = uid;
-            document.getElementById('active-recipient-name').innerText = `ID: ${uid.substring(0, 16)}...`;
-            
-            if (messagesUnsubscribe) messagesUnsubscribe();
+      if (sessionResult.data && sessionResult.data.session) {
+        await handleSession(sessionResult.data.session);
+      } else {
+        showOnly('auth');
+        setAuthTab('login');
+      }
+    } catch (err) {
+      showFatal('Connection failed', friendly(err));
+    }
+  }
 
-            const txQuery = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
-            messagesUnsubscribe = onSnapshot(txQuery, (snapshot) => {
-                const messagesContainer = document.getElementById('chat-messages');
-                messagesContainer.innerHTML = '';
-                let txs = [];
+  function showFatal(title, text) {
+    $('fatal-title').textContent = title;
+    $('fatal-text').textContent = text || '';
+    showOnly('fatal');
+  }
 
-                snapshot.forEach((doc) => {
-                    const tx = doc.data();
-                    if ((tx.senderId === currentUser.uid && tx.receiverId === activeRecipientId) || (tx.senderId === activeRecipientId && tx.receiverId === currentUser.uid)) {
-                        txs.push({ id: doc.id, ...tx });
-                    }
-                });
+  async function loadProfileWithRetry() {
+    for (let i = 0; i < 4; i++) {
+      const res = await state.sb.from('profiles').select('*').eq('id', state.user.id).maybeSingle();
+      if (res.error) throw res.error;
+      if (res.data) { state.profile = res.data; return; }
+      await sleep(700);
+    }
+    throw new Error('PROFILE_NOT_FOUND');
+  }
 
-                txs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+  async function handleSession(session) {
+    if (!session || !session.user) return;
+    state.session = session;
+    state.user = session.user;
+    if (state.bootedFor === session.user.id) return;
+    state.bootedFor = session.user.id;
 
-                if (txs.length === 0) {
-                    messagesContainer.innerHTML = `<div class="text-center text-gray-500 text-xs py-12">Історія транзакцій порожня. Надішліть перше фото!</div>`;
-                    return;
-                }
+    showOnly('boot');
+    $('boot-text').textContent = 'Loading your account…';
+    try {
+      await loadProfileWithRetry();
+      await refreshData(false);
+      startRealtime();
+      state.view = 'dashboard';
+      showOnly('app');
+      renderAll();
+      switchView('dashboard');
+    } catch (err) {
+      state.bootedFor = null;
+      showFatal('We could not open your account', friendly(err));
+    }
+  }
 
-                txs.forEach((tx) => {
-                    const isMyTx = tx.senderId === currentUser.uid;
-                    const msgEl = document.createElement('div');
-                    msgEl.className = `flex ${isMyTx ? 'justify-end' : 'justify-start'} w-full`;
-                    msgEl.innerHTML = `
-                        <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl overflow-hidden shadow-lg ${isMyTx ? 'bg-[#1e293b] border border-yellow-500/30 text-white' : 'bg-[#151c2c] border border-gray-800 text-gray-200'}">
-                            <div class="relative min-w-[200px] aspect-video bg-black/40">
-                                <img src="${tx.photo}" class="w-full h-full object-cover">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                                    <div class="flex items-center gap-1.5 bg-yellow-500 text-black px-2.5 py-1 rounded-lg text-xs font-black">
-                                        <span>${tx.amount} STC</span>
-                                    </div>
-                                    <span class="text-[9px] text-gray-300 font-mono">${isMyTx ? 'Ви надіслали' : 'Отримано'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    messagesContainer.appendChild(msgEl);
-                });
+  function signedOut() {
+    stopRealtime();
+    state.session = null; state.user = null; state.profile = null; state.bank = null;
+    state.participants = []; state.transactions = []; state.allTransactions = []; state.stats = null;
+    state.bootedFor = null; state.pendingTransfer = null; state.transferKey = null;
+    state.view = 'dashboard'; state.filter = 'all'; state.query = '';
+    closeModal();
+    showOnly('auth');
+    setAuthTab('login');
+  }
 
-                setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 50);
-                lucide.createIcons();
-            });
-        }
+  async function doSignOut() {
+    try { stopRealtime(); await state.sb.auth.signOut(); } catch (e) {}
+    signedOut();
+  }
 
-        const fileInput = document.getElementById('input-file');
-        const previewContainer = document.getElementById('photo-preview-container');
-        const previewImg = document.getElementById('photo-preview-img');
+  function retryBoot() {
+    if (state.session) {
+      state.bootedFor = null;
+      handleSession(state.session).catch(function (err) { showFatal('Still unavailable', friendly(err)); });
+    } else if (state.sb) {
+      connect(readConfig());
+    } else {
+      location.reload();
+    }
+  }
 
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+  function resetConnection() {
+    try { localStorage.removeItem(CONFIG_KEY); } catch (e) {}
+    location.reload();
+  }
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 400;
-                    const scale = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scale;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    base64Photo = canvas.toDataURL('image/jpeg', 0.7);
-                    previewImg.src = base64Photo;
-                    previewContainer.classList.remove('hidden');
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
+  function setAuthTab(tab) {
+    document.querySelectorAll('[data-auth-tab]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.authTab === tab);
+    });
+    $('login-form').classList.toggle('hidden', tab !== 'login');
+    $('register-form').classList.toggle('hidden', tab !== 'register');
+    formError('login-error', '');
+    formError('reg-error', '');
+    $('auth-note').classList.add('hidden');
+  }
 
-        document.getElementById('btn-remove-photo').addEventListener('click', () => {
-            base64Photo = null;
-            previewImg.src = '';
-            previewContainer.classList.add('hidden');
-            fileInput.value = '';
-        });
+  async function doLogin(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    formError('login-error', '');
+    setBusy(btn, true, 'Signing in…');
+    try {
+      const name = trim($('login-name').value).replace(/\s+/g, ' ');
+      if (name.length < 2) throw new Error('Enter your name.');
+      const res = await state.sb.auth.signInWithPassword({ email: loginKey(name), password: internalSecret(name) });
+      if (res.error) throw res.error;
+      form.reset();
+    } catch (err) {
+      formError('login-error', friendly(err));
+    } finally {
+      setBusy(btn, false);
+    }
+  }
 
-        const btnSend = document.getElementById('btn-send');
-        btnSend.addEventListener('click', async () => {
-            if (!currentUser || !activeRecipientId || !base64Photo) {
-                showNotification("Оберіть отримувача та додайте фотографія!");
-                return;
-            }
+  async function doRegister(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    formError('reg-error', '');
+    setBusy(btn, true, 'Opening account…');
+    let name = '';
+    try {
+      name = trim($('reg-name').value).replace(/\s+/g, ' ');
+      if (name.length < 2) throw new Error('Enter your name (at least 2 characters).');
+      const res = await state.sb.auth.signUp({
+        email: loginKey(name), password: internalSecret(name), options: { data: { full_name: name } }
+      });
+      if (res.error) throw res.error;
+      if (res.data && res.data.session) {
+        form.reset();
+        return; // the auth listener opens the app
+      }
+      setAuthTab('login');
+      $('login-name').value = name;
+      const note = $('auth-note');
+      note.innerHTML = '<b>Account created.</b> This bank is still set to confirm accounts by email, but SitBank accounts use names only. ' +
+        'Ask the administrator to turn off <i>Confirm email</i> in Supabase → Authentication → Sign In / Providers → Email, then sign in with your name.';
+      note.classList.remove('hidden');
+      form.reset();
+    } catch (err) {
+      const raw = (err && (err.message || err.error_description || err.msg)) || '';
+      if (/rate limit|over_email_send_rate_limit/i.test(raw)) {
+        setAuthTab('login');
+        $('login-name').value = name;
+        const note = $('auth-note');
+        note.innerHTML = '<b>The account was not opened.</b> Supabase tried to send a confirmation email and ran into its mail limit. ' +
+          'SitBank never uses email — the administrator only needs to switch <i>Confirm email</i> off once: ' +
+          'Supabase → Authentication → Sign In / Providers → Email. Then try again with the same name.';
+        note.classList.remove('hidden');
+        form.reset();
+      } else {
+        formError('reg-error', friendly(err));
+      }
+    } finally {
+      setBusy(btn, false);
+    }
+  }
 
-            const amountInput = document.getElementById('input-amount');
-            const amount = parseInt(amountInput.value);
+  /* ── data loading & realtime ───────────────────────────────────── */
+  async function refreshData(quiet) {
+    if (!state.sb || !state.user || state.refreshing) return;
+    state.refreshing = true;
+    try {
+      const head = await Promise.all([
+        state.sb.from('profiles').select('*').eq('id', state.user.id).maybeSingle(),
+        state.sb.from('bank_settings').select('*').eq('id', 1).maybeSingle()
+      ]);
+      if (head[0].error) throw head[0].error;
+      if (head[1].error) throw head[1].error;
+      if (!head[0].data) throw new Error('PROFILE_NOT_FOUND');
+      state.profile = head[0].data;
+      if (head[1].data) state.bank = head[1].data;
+      if (!state.bank) throw new Error('BANK_SETUP_MISSING');
 
-            if (isNaN(amount) || amount <= 0 || amount > myBalance) {
-                showNotification("Некоректна сума або недостатньо балансу!");
-                return;
-            }
+      const acc = state.profile.account_number;
+      const body = await Promise.all([
+        state.sb.from('profiles').select('*').order('created_at', { ascending: true }),
+        state.sb.from('transactions').select('*')
+          .or('from_account.eq.' + acc + ',to_account.eq.' + acc)
+          .order('created_at', { ascending: false }).limit(200)
+      ]);
+      if (body[0].error) throw body[0].error;
+      if (body[1].error) throw body[1].error;
+      state.participants = body[0].data || [];
+      state.transactions = body[1].data || [];
 
-            btnSend.disabled = true;
-            btnSend.innerText = "Надсилання...";
+      if (state.profile.is_admin) {
+        const allRes = await state.sb.from('transactions').select('*')
+          .order('created_at', { ascending: false }).limit(200);
+        state.allTransactions = allRes.error ? state.transactions : (allRes.data || []);
+        const statsRes = await state.sb.rpc('get_bank_stats');
+        state.stats = statsRes.error ? null : statsRes.data;
+      } else {
+        state.allTransactions = state.transactions;
+        state.stats = null;
+      }
+    } catch (err) {
+      if (!quiet) throw err;
+      console.warn('[SitBank] background refresh failed', err);
+    } finally {
+      state.refreshing = false;
+    }
+  }
 
-            try {
-                const newSenderBalance = myBalance - amount;
-                const recipientRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', activeRecipientId);
-                const recipientSnap = await getDoc(recipientRef);
-                const currentRecipientBalance = recipientSnap.exists() ? (recipientSnap.data().balance || 0) : 0;
+  function startRealtime() {
+    stopRealtime();
+    if (!state.sb) return;
+    try {
+      state.channel = state.sb.channel('sitbank-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_settings' }, scheduleRefresh)
+        .subscribe();
+    } catch (e) {
+      console.warn('[SitBank] realtime unavailable', e);
+    }
+  }
+  function stopRealtime() {
+    if (state.channel && state.sb) {
+      try { state.sb.removeChannel(state.channel); } catch (e) {}
+    }
+    state.channel = null;
+    clearTimeout(state.refreshTimer);
+  }
+  function scheduleRefresh() {
+    clearTimeout(state.refreshTimer);
+    state.refreshTimer = setTimeout(function () {
+      refreshData(true).then(renderAll).catch(function () {});
+    }, 400);
+  }
 
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), { balance: newSenderBalance });
-                await updateDoc(recipientRef, { balance: currentRecipientBalance + amount });
+  /* ── rendering ─────────────────────────────────────────────────── */
+  function renderAll() {
+    if (!state.profile || !state.bank) return;
+    renderChrome();
+    renderDashboard();
+    renderTransferMeta();
+    renderHistory();
+    renderParticipants();
+    renderBank();
+    renderAdmin();
+  }
 
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                    senderId: currentUser.uid,
-                    receiverId: activeRecipientId,
-                    amount: amount,
-                    photo: base64Photo,
-                    timestamp: serverTimestamp()
-                });
+  function renderChrome() {
+    const p = state.profile;
+    $('chip-name').textContent = p.full_name;
+    $('chip-acc').textContent = p.account_number;
+    $('chip-avatar').textContent = initials(p.full_name);
+    $('side-rate').textContent = '1 ' + cur() + ' = ' + rounds.format(rate()) + ' ₴';
+    $('nav-admin').classList.toggle('hidden', !p.is_admin);
+    $('nav-connection').classList.toggle('hidden', !p.is_admin);
+    if (state.view === 'admin' && !p.is_admin) state.view = 'dashboard';
+    const meta = VIEW_META[state.view] || VIEW_META.dashboard;
+    $('page-title').textContent = meta[0];
+    $('page-sub').textContent = state.view === 'dashboard'
+      ? 'Welcome back, ' + trim(p.full_name).split(/\s+/)[0]
+      : meta[1];
+    document.querySelectorAll('#nav [data-view]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.view === state.view);
+    });
+  }
 
-                amountInput.value = '';
-                base64Photo = null;
-                previewContainer.classList.add('hidden');
-                showNotification(`Переказ на ${amount} STC успішно відправлено!`, false);
-            } catch (error) {
-                console.error(error);
-                showNotification("Помилка транзакції.");
-            } finally {
-                btnSend.disabled = false;
-                btnSend.innerHTML = `<span>Надіслати</span><i data-lucide="send" class="w-4 h-4"></i>`;
-                lucide.createIcons();
-            }
-        });
+  function emptyState(title, text) {
+    return '<div class="empty"><svg class="ico"><use href="#i-history"/></svg><b>' + esc(title) + '</b><span>' + esc(text) + '</span></div>';
+  }
 
-        lucide.createIcons();
-    </script>
+  function renderDashboard() {
+    const p = state.profile;
+    $('balance-sit').textContent = money(p.balance);
+    $('balance-uah').textContent = uah(p.balance);
+    $('balance-account').textContent = p.account_number;
+    $('balance-status').innerHTML = p.is_blocked
+      ? '<span class="badge warn">Blocked</span>'
+      : '<span class="badge ok">Active</span>';
+    const list = state.transactions.slice(0, 5);
+    $('dash-tx').innerHTML = list.length
+      ? list.map(personalTx).join('')
+      : emptyState('No movements yet', 'Your welcome balance and transfers will appear here.');
+    $('snapshot-rate').textContent = '1 ' + cur() + ' = ' + rounds.format(rate()) + ' ₴';
+    $('snapshot-reserve').textContent = money(state.bank.reserve) + ' ' + cur();
+    $('snapshot-circ').textContent = money(circulation()) + ' ' + cur();
+    $('snapshot-people').textContent = state.participants.length;
+    $('snapshot-note').textContent = state.bank.note || '';
+  }
+
+  function personalTx(t) {
+    const acc = state.profile.account_number;
+    const incoming = t.to_account === acc;
+    const isBank = t.type === 'deposit' || t.type === 'withdrawal' || t.type === 'initial_grant';
+    let title;
+    if (t.type === 'initial_grant') title = 'Welcome balance';
+    else if (t.type === 'deposit') title = 'Deposit by SitBank';
+    else if (t.type === 'withdrawal') title = 'Withdrawal by SitBank';
+    else if (incoming) title = 'From ' + (t.from_name || 'Participant');
+    else title = 'To ' + (t.to_name || 'Participant');
+    const sub = [t.description, fmtDate(t.created_at)].filter(Boolean).join(' · ');
+    const cls = incoming ? 'in' : 'out';
+    const sign = incoming ? '+' : '−';
+    const icon = isBank ? 'i-bank' : incoming ? 'i-arrow-down' : 'i-arrow-up';
+    return '<div class="tx">' +
+      '<div class="tx-icon ' + cls + '"><svg class="ico"><use href="#' + icon + '"/></svg></div>' +
+      '<div class="tx-main"><div class="tx-title">' + esc(title) + '</div><div class="tx-sub">' + esc(sub) + '</div></div>' +
+      '<div><div class="tx-amt ' + cls + '">' + sign + ' ' + money(t.amount) + ' ' + esc(cur()) + '</div>' +
+      '<div class="tx-bal">' + (t.balance_after != null ? 'Bal. ' + money(t.balance_after) : '') + '</div></div>' +
+      '</div>';
+  }
+
+  function filterTx(list, filter) {
+    const acc = state.profile.account_number;
+    if (filter === 'in') return list.filter(function (t) { return t.to_account === acc; });
+    if (filter === 'out') return list.filter(function (t) { return t.from_account === acc; });
+    if (filter === 'admin') return list.filter(function (t) {
+      return t.type === 'deposit' || t.type === 'withdrawal' || t.type === 'initial_grant';
+    });
+    return list;
+  }
+
+  function renderHistory() {
+    const all = state.transactions;
+    const list = filterTx(all, state.filter);
+    $('history-count').textContent = all.length
+      ? list.length + ' of ' + all.length + ' movements'
+      : 'No movements yet';
+    $('history-list').innerHTML = list.length
+      ? list.map(personalTx).join('')
+      : emptyState('Nothing here yet', state.filter === 'all'
+          ? 'Transfers, deposits and withdrawals will be listed here.'
+          : 'No movements match this filter.');
+    document.querySelectorAll('[data-action="filter"]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.filter === state.filter);
+    });
+  }
+
+  function renderTransferMeta() {
+    const p = state.profile;
+    $('t-balance').textContent = money(p.balance) + ' ' + cur();
+    $('t-rate').textContent = rounds.format(rate());
+    $('t-submit').disabled = !!p.is_blocked;
+    $('t-blocked-note').classList.toggle('hidden', !p.is_blocked);
+    updateTransferPreview();
+  }
+
+  function updateTransferPreview() {
+    const input = $('t-amount');
+    if (!input || !state.bank) return;
+    const v = Number(input.value || 0);
+    $('t-uah').textContent = nf.format(v * rate());
+  }
+
+  function renderParticipants() {
+    const q = state.query.toLowerCase();
+    const list = state.participants.filter(function (p) {
+      return !q || p.full_name.toLowerCase().indexOf(q) !== -1 || p.account_number.indexOf(q) !== -1;
+    });
+    $('participants-count').textContent = state.participants.length +
+      (state.participants.length === 1 ? ' participant' : ' participants');
+    $('participants-list').innerHTML = list.length
+      ? list.map(function (p) { return personRow(p); }).join('')
+      : emptyState('No participants found', 'Try a different name or account number.');
+  }
+
+  function personRow(p) {
+    const me = state.profile;
+    const self = p.id === me.id;
+    const canSend = !self && !p.is_blocked && !me.is_blocked;
+    const badges =
+      (self ? ' <span class="badge info">You</span>' : '') +
+      (p.is_admin ? ' <span class="badge gold">Admin</span>' : '') +
+      (p.is_blocked ? ' <span class="badge warn">Blocked</span>' : '');
+    return '<div class="person">' +
+      '<div class="avatar' + (self ? ' me' : '') + '">' + esc(initials(p.full_name)) + '</div>' +
+      '<div class="person-main"><div class="person-name">' + esc(p.full_name) + badges + '</div>' +
+      '<div class="person-acc mono">' + esc(p.account_number) + '</div></div>' +
+      '<div class="person-actions">' +
+        (self ? '' : '<button class="btn sm primary" data-action="send-to" data-account="' + esc(p.account_number) +
+          '" data-name="' + esc(p.full_name) + '"' + (canSend ? '' : ' disabled title="Transfers are not available"') + '>Send</button>') +
+        (me.is_admin && !self ? '<button class="btn sm ' + (p.is_blocked ? '' : 'danger') + '" data-action="toggle-block" data-account="' +
+          esc(p.account_number) + '" data-blocked="' + (p.is_blocked ? 'false' : 'true') + '">' +
+          (p.is_blocked ? 'Unblock' : 'Block') + '</button>' : '') +
+      '</div></div>';
+  }
+
+  function renderBank() {
+    const b = state.bank;
+    $('bank-name').textContent = b.bank_name;
+    $('bank-name-2').textContent = b.bank_name;
+    $('bank-note').textContent = b.note || '';
+    $('bank-rate').textContent = '1 ' + b.currency_code + ' = ' + rounds.format(b.rate_uah) + ' ₴';
+    $('bank-currency').textContent = b.currency_name + ' (' + b.currency_code + ')';
+    $('bank-capital').textContent = money(b.initial_capital) + ' ' + b.currency_code;
+    $('bank-capital-uah').textContent = '≈ ' + uah(b.initial_capital) + ' UAH';
+    $('bank-initial').textContent = money(b.initial_balance) + ' ' + b.currency_code;
+    $('bank-initial-uah').textContent = '≈ ' + uah(b.initial_balance) + ' UAH';
+    $('bank-reserve').textContent = money(b.reserve) + ' ' + b.currency_code;
+    $('bank-circ').textContent = money(circulation()) + ' ' + b.currency_code;
+    $('bank-code').textContent = b.currency_name + ' · ' + b.currency_code;
+    $('bank-rate-2').textContent = '1 ' + b.currency_code + ' = ' + money(b.rate_uah) + ' UAH';
+    $('bank-capital-2').textContent = money(b.initial_capital) + ' ' + b.currency_code;
+    $('bank-initial-2').textContent = money(b.initial_balance) + ' ' + b.currency_code;
+    $('bank-updated').textContent = fmtDate(b.updated_at);
+    $('conv-note').textContent = '1 ' + b.currency_code + ' = ' + money(b.rate_uah) + ' UAH';
+    updateConverter();
+  }
+
+  function updateConverter() {
+    const input = $('conv-input');
+    if (!input || !state.bank) return;
+    const v = Number(input.value || 0);
+    $('conv-output').textContent = nf.format(v * rate()) + ' UAH';
+  }
+
+  function renderAdmin() {
+    const isAdmin = !!(state.profile && state.profile.is_admin);
+    $('admin-denied').classList.toggle('hidden', isAdmin);
+    $('admin-content').classList.toggle('hidden', !isAdmin);
+    if (!isAdmin) return;
+
+    const s = state.stats || {};
+    const b = state.bank;
+    const c = cur();
+    const cards = [
+      ['Total capital', money(s.capital) + ' ' + c, '≈ ' + uah(s.capital) + ' UAH · reserve + circulation'],
+      ['Bank reserve', money(s.reserve) + ' ' + c, 'Unissued bank funds'],
+      ['In circulation', money(s.circulation) + ' ' + c, 'Held by participants'],
+      ['Participants', String(s.participants || 0), (s.blocked || 0) + ' blocked'],
+      ['Transactions', String(s.transactions || 0), money(s.volume) + ' ' + c + ' moved']
+    ];
+    $('admin-stats').innerHTML = cards.map(function (card) {
+      return '<div class="card stat"><div class="stat-label">' + esc(card[0]) + '</div>' +
+        '<div class="stat-value">' + esc(card[1]) + '</div>' +
+        '<div class="stat-sub">' + esc(card[2]) + '</div></div>';
+    }).join('');
+
+    const rows = state.participants.map(function (p) {
+      const self = p.id === state.profile.id;
+      return '<tr>' +
+        '<td><div class="cell-name">' + esc(p.full_name) +
+          (p.is_admin ? ' <span class="badge gold">Admin</span>' : '') +
+          (self ? ' <span class="badge info">You</span>' : '') + '</div>' +
+          '<div class="mono small muted">' + esc(p.account_number) + '</div></td>' +
+        '<td class="num">' + money(p.balance) + '</td>' +
+        '<td>' + (p.is_blocked ? '<span class="badge warn">Blocked</span>' : '<span class="badge ok">Active</span>') + '</td>' +
+        '<td class="actions">' +
+          '<button class="btn sm" data-action="adjust" data-account="' + esc(p.account_number) + '" data-kind="deposit">Add</button>' +
+          '<button class="btn sm" data-action="adjust" data-account="' + esc(p.account_number) + '" data-kind="withdrawal">Withdraw</button>' +
+          (self ? '' : '<button class="btn sm ' + (p.is_blocked ? '' : 'danger') + '" data-action="toggle-block" data-account="' +
+            esc(p.account_number) + '" data-blocked="' + (p.is_blocked ? 'false' : 'true') + '">' +
+            (p.is_blocked ? 'Unblock' : 'Block') + '</button>') +
+        '</td></tr>';
+    });
+    $('admin-accounts-count').textContent = rows.length + (rows.length === 1 ? ' account' : ' accounts');
+    $('admin-accounts').innerHTML =
+      '<thead><tr><th>Account</th><th class="num">Balance (' + esc(c) + ')</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>' +
+      '<tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="4" class="muted">No accounts yet.</td></tr>') + '</tbody>';
+
+    const txRows = state.allTransactions.slice(0, 100).map(function (t) {
+      return '<tr>' +
+        '<td class="small muted nowrap">' + esc(fmtDate(t.created_at)) + '</td>' +
+        '<td><span class="tag ' + esc(t.type) + '">' + esc(String(t.type).replace('_', ' ')) + '</span></td>' +
+        '<td class="small">' + (t.from_account ? esc(t.from_name + ' · ' + t.from_account) : '<span class="muted">Bank</span>') + '</td>' +
+        '<td class="small">' + (t.to_account ? esc(t.to_name + ' · ' + t.to_account) : '<span class="muted">Bank</span>') + '</td>' +
+        '<td class="num">' + money(t.amount) + '</td>' +
+        '<td class="small muted">' + esc(t.description) + '</td></tr>';
+    });
+    $('admin-tx').innerHTML =
+      '<thead><tr><th>Date</th><th>Type</th><th>From</th><th>To</th><th class="num">Amount</th><th>Description</th></tr></thead>' +
+      '<tbody>' + (txRows.length ? txRows.join('') : '<tr><td colspan="6" class="muted">No transactions yet.</td></tr>') + '</tbody>';
+
+    $('admin-bank-summary').innerHTML =
+      '<div class="kv"><span>Bank name</span><b>' + esc(b.bank_name) + '</b></div>' +
+      '<div class="kv"><span>Currency</span><b>' + esc(b.currency_name + ' (' + b.currency_code + ')') + '</b></div>' +
+      '<div class="kv"><span>Official rate</span><b>1 ' + esc(b.currency_code) + ' = ' + money(b.rate_uah) + ' UAH</b></div>' +
+      '<div class="kv"><span>Initial capital</span><b>' + money(b.initial_capital) + ' ' + esc(b.currency_code) + '</b></div>' +
+      '<div class="kv"><span>Welcome balance</span><b>' + money(b.initial_balance) + ' ' + esc(b.currency_code) + '</b></div>' +
+      '<div class="kv"><span>Reserve</span><b>' + money(b.reserve) + ' ' + esc(b.currency_code) + '</b></div>' +
+      '<div class="kv"><span>Last updated</span><b>' + esc(fmtDate(b.updated_at)) + '</b></div>';
+  }
+
+  function switchView(name) {
+    if (!VIEW_META[name]) name = 'dashboard';
+    if (name === 'admin' && !(state.profile && state.profile.is_admin)) name = 'dashboard';
+    state.view = name;
+    document.querySelectorAll('.view').forEach(function (v) {
+      v.classList.toggle('active', v.id === 'view-' + name);
+    });
+    renderChrome();
+    if (name === 'history') renderHistory();
+    if (name === 'participants') renderParticipants();
+    if (name === 'bank') renderBank();
+    if (name === 'admin') renderAdmin();
+    if (name === 'transfer') updateTransferPreview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── user actions ──────────────────────────────────────────────── */
+  async function copyAccount() {
+    const acc = state.profile && state.profile.account_number;
+    if (!acc) return;
+    let done = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(acc);
+        done = true;
+      }
+    } catch (e) { done = false; }
+    if (!done) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = acc;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        done = document.execCommand('copy');
+        ta.remove();
+      } catch (e) { done = false; }
+    }
+    toast(done ? 'Account number copied.' : 'Your account number is ' + acc, done ? 'ok' : 'info');
+  }
+
+  function setAmount(value) {
+    const input = $('t-amount');
+    if (!input) return;
+    if (value === 'max') {
+      input.value = String(Math.max(0, Number(state.profile.balance || 0)));
+    } else {
+      input.value = value;
+    }
+    updateTransferPreview();
+  }
+
+  function prefillTransfer(account, name) {
+    switchView('transfer');
+    $('t-account').value = account;
+    updateResolved();
+    if (name) toast('Transferring to ' + name + '. Enter an amount.', 'info');
+    setTimeout(function () { try { $('t-amount').focus(); } catch (e) {} }, 80);
+  }
+
+  function updateResolved() {
+    const box = $('t-resolved');
+    if (!box) return;
+    const acc = digits($('t-account').value);
+    const found = state.participants.find(function (p) { return p.account_number === acc; });
+    if (!acc) {
+      box.className = 'resolve';
+      box.textContent = '';
+      return;
+    }
+    if (found) {
+      box.className = 'resolve ok';
+      box.textContent = '✓ ' + found.full_name + (found.id === (state.profile && state.profile.id) ? ' (your account)' : '');
+    } else if (acc.length >= 10) {
+      box.className = 'resolve warn';
+      box.textContent = 'No participant with this account number.';
+    } else {
+      box.className = 'resolve';
+      box.textContent = '';
+    }
+  }
+
+  function reviewTransfer() {
+    const me = state.profile;
+    const to = digits($('t-account').value);
+    const amount = Number($('t-amount').value);
+    const desc = trim($('t-desc').value);
+
+    if (me.is_blocked) { toast('Your account is blocked. Transfers are disabled.', 'err'); return; }
+    if (!to) { toast('Enter the recipient account number.', 'err'); return; }
+    if (!(amount > 0)) { toast('Enter an amount greater than zero.', 'err'); return; }
+    if (amount > Number(me.balance)) { toast('That is more than your available balance.', 'err'); return; }
+    const recipient = state.participants.find(function (p) { return p.account_number === to; });
+    if (!recipient) { toast('No participant has that account number.', 'err'); return; }
+    if (recipient.id === me.id) { toast('You cannot send money to your own account.', 'err'); return; }
+    if (recipient.is_blocked) { toast('That account is blocked and cannot receive transfers.', 'err'); return; }
+
+    state.pendingTransfer = { to: recipient.account_number, amount: amount, desc: desc, name: recipient.full_name };
+    state.transferKey = newKey();
+
+    openModal(
+      '<div class="modal-head"><h3>Review transfer</h3>' +
+      '<button class="icon-btn" data-action="close-modal" aria-label="Close">✕</button></div>' +
+      '<div class="review">' +
+        '<div class="review-row"><span>To</span><b>' + esc(recipient.full_name) + '</b></div>' +
+        '<div class="review-row"><span>Account</span><b class="mono">' + esc(recipient.account_number) + '</b></div>' +
+        '<div class="review-row"><span>Amount</span><b>' + money(amount) + ' ' + esc(cur()) + '</b></div>' +
+        '<div class="review-row"><span>In hryvnia</span><b>≈ ' + nf.format(amount * rate()) + ' UAH</b></div>' +
+        '<div class="review-row"><span>Fee</span><b>0.00 ' + esc(cur()) + '</b></div>' +
+        '<div class="review-row"><span>Description</span><b>' + esc(desc || 'Transfer') + '</b></div>' +
+      '</div>' +
+      '<p class="help">Transfers are instant and cannot be reversed. This operation is recorded permanently.</p>' +
+      '<div class="modal-actions"><button class="btn" data-action="close-modal">Back</button>' +
+      '<button class="btn primary" data-action="confirm-transfer">Send ' + money(amount) + ' ' + esc(cur()) + '</button></div>'
+    );
+  }
+
+  async function confirmTransfer(btn) {
+    const pending = state.pendingTransfer;
+    const key = state.transferKey;
+    if (!pending || !key) return;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const res = await state.sb.rpc('transfer_funds', {
+        p_to_account: pending.to,
+        p_amount: pending.amount,
+        p_description: pending.desc || null,
+        p_idempotency_key: key
+      });
+      if (res.error) throw res.error;
+      closeModal();
+      if (res.data && res.data.duplicate) toast('This transfer was already processed — no money was sent twice.', 'info');
+      else toast('Sent ' + money(pending.amount) + ' ' + cur() + ' to ' + pending.name + '.', 'ok');
+      state.pendingTransfer = null;
+      state.transferKey = null;
+      $('transfer-form').reset();
+      updateResolved();
+      updateTransferPreview();
+      await refreshData(false);
+      renderAll();
+    } catch (err) {
+      toast(friendly(err), 'err');
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
+  }
+
+  function openAdjustModal(account, kind) {
+    const p = state.participants.find(function (x) { return x.account_number === account; });
+    const isDeposit = kind === 'deposit';
+    state.adminKey = newKey();
+    openModal(
+      '<div class="modal-head"><h3>' + (isDeposit ? 'Add funds' : 'Withdraw funds') + '</h3>' +
+      '<button class="icon-btn" data-action="close-modal" aria-label="Close">✕</button></div>' +
+      '<p class="muted small">' + esc(p ? p.full_name : 'Account') + ' · <span class="mono">' + esc(account) + '</span></p>' +
+      '<form id="adjust-form" data-kind="' + esc(kind) + '" data-account="' + esc(account) + '">' +
+        '<div class="field"><label for="adj-amount">Amount (' + esc(cur()) + ')</label>' +
+          '<input id="adj-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>' +
+        '<div class="field"><label for="adj-desc">Description</label>' +
+          '<input id="adj-desc" maxlength="80" value="' + (isDeposit ? 'Manual deposit' : 'Manual withdrawal') + '"></div>' +
+        '<p class="help">' + (isDeposit ? 'Funded from the bank reserve.' : 'Returned to the bank reserve.') +
+          ' The operation is recorded permanently in the shared ledger.</p>' +
+        '<div class="modal-actions"><button type="button" class="btn" data-action="close-modal">Cancel</button>' +
+        '<button class="btn primary" type="submit">' + (isDeposit ? 'Add funds' : 'Withdraw funds') + '</button></div>' +
+      '</form>'
+    );
+  }
+
+  async function doAdjust(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    const kind = form.dataset.kind;
+    const account = form.dataset.account;
+    const amount = Number($('adj-amount').value);
+    const desc = trim($('adj-desc').value);
+    if (!(amount > 0)) { toast('Enter an amount greater than zero.', 'err'); return; }
+    setBusy(btn, true, 'Processing…');
+    try {
+      const res = await state.sb.rpc('admin_adjust_balance', {
+        p_account_number: account,
+        p_amount: amount,
+        p_kind: kind,
+        p_description: desc || null,
+        p_idempotency_key: state.adminKey || newKey()
+      });
+      if (res.error) throw res.error;
+      closeModal();
+      state.adminKey = null;
+      toast((kind === 'deposit' ? 'Added ' : 'Withdrew ') + money(amount) + ' ' + cur() +
+        (kind === 'deposit' ? ' to ' : ' from ') + account + '.', 'ok');
+      await refreshData(false);
+      renderAll();
+    } catch (err) {
+      toast(friendly(err), 'err');
+      setBusy(btn, false);
+    }
+  }
+
+  function askToggleBlock(account, blocked) {
+    const p = state.participants.find(function (x) { return x.account_number === account; });
+    confirmDialog({
+      title: blocked ? 'Block account' : 'Unblock account',
+      body: (blocked
+        ? 'Blocking stops all transfers for <b>' + esc(p ? p.full_name : account) + '</b> (<span class="mono">' + esc(account) + '</span>). Their balance stays safe.'
+        : 'Unblocking restores transfers for <b>' + esc(p ? p.full_name : account) + '</b> (<span class="mono">' + esc(account) + '</span>).'),
+      label: blocked ? 'Block account' : 'Unblock',
+      danger: blocked,
+      run: async function () {
+        const res = await state.sb.rpc('admin_set_blocked', { p_account_number: account, p_blocked: blocked });
+        if (res.error) throw res.error;
+        closeModal();
+        toast(blocked ? 'Account blocked.' : 'Account unblocked.', 'ok');
+        await refreshData(false);
+        renderAll();
+      }
+    });
+  }
+
+  function openBankModal() {
+    const b = state.bank;
+    openModal(
+      '<div class="modal-head"><h3>Bank settings</h3>' +
+      '<button class="icon-btn" data-action="close-modal" aria-label="Close">✕</button></div>' +
+      '<form id="bank-form">' +
+        '<div class="field"><label for="b-name">Bank name</label>' +
+          '<input id="b-name" maxlength="60" value="' + esc(b.bank_name) + '" required></div>' +
+        '<div class="grid two-col">' +
+          '<div class="field"><label for="b-currency">Currency name</label>' +
+            '<input id="b-currency" maxlength="30" value="' + esc(b.currency_name) + '"></div>' +
+          '<div class="field"><label for="b-code">Currency code</label>' +
+            '<input id="b-code" maxlength="8" value="' + esc(b.currency_code) + '"></div>' +
+        '</div>' +
+        '<div class="field"><label for="b-rate">Official rate — UAH per 1 ' + esc(b.currency_code) + '</label>' +
+          '<input id="b-rate" type="number" min="0.0001" step="0.0001" value="' + esc(b.rate_uah) + '" required></div>' +
+        '<div class="grid two-col">' +
+          '<div class="field"><label for="b-capital">Initial bank capital</label>' +
+            '<input id="b-capital" type="number" min="0" step="0.01" value="' + esc(b.initial_capital) + '"></div>' +
+          '<div class="field"><label for="b-initial">New participant balance</label>' +
+            '<input id="b-initial" type="number" min="0" step="0.01" value="' + esc(b.initial_balance) + '"></div>' +
+        '</div>' +
+        '<div class="field"><label for="b-note">Public note</label>' +
+          '<input id="b-note" maxlength="240" value="' + esc(b.note) + '"></div>' +
+        '<p class="help">Initial values describe the bank and apply to future participants; existing balances are not recalculated.</p>' +
+        '<div class="modal-actions"><button type="button" class="btn" data-action="close-modal">Cancel</button>' +
+        '<button class="btn primary" type="submit">Save settings</button></div>' +
+      '</form>'
+    );
+  }
+
+  async function doBankUpdate(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    setBusy(btn, true, 'Saving…');
+    try {
+      const res = await state.sb.rpc('admin_update_bank', {
+        p_bank_name: trim($('b-name').value),
+        p_currency_name: trim($('b-currency').value),
+        p_currency_code: trim($('b-code').value),
+        p_rate_uah: Number($('b-rate').value),
+        p_initial_capital: Number($('b-capital').value),
+        p_initial_balance: Number($('b-initial').value),
+        p_note: trim($('b-note').value) || null
+      });
+      if (res.error) throw res.error;
+      closeModal();
+      toast('Bank information updated.', 'ok');
+      await refreshData(false);
+      renderAll();
+    } catch (err) {
+      toast(friendly(err), 'err');
+      setBusy(btn, false);
+    }
+  }
+
+  async function manualRefresh(btn) {
+    if (btn) btn.disabled = true;
+    try {
+      await refreshData(false);
+      renderAll();
+      toast('Up to date.', 'ok');
+    } catch (err) {
+      toast(friendly(err), 'err');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function saveConnection() {
+    const url = trim($('setup-url').value).replace(/\/+$/, '');
+    const key = trim($('setup-key').value);
+    formError('setup-error', '');
+    if (!/^https:\/\/.+/i.test(url)) {
+      formError('setup-error', 'Enter the full Project URL, for example https://yourproject.supabase.co');
+      return;
+    }
+    if (key.length < 20) {
+      formError('setup-error', 'Paste the anon public key from Project Settings → API.');
+      return;
+    }
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify({ url: url, key: key })); } catch (e) {}
+    connect({ url: url, key: key });
+  }
+
+  /* ── event wiring ──────────────────────────────────────────────── */
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (!form || !form.id) return;
+    const handlers = {
+      'setup-form': function () { saveConnection(); },
+      'login-form': function () { doLogin(form); },
+      'register-form': function () { doRegister(form); },
+      'transfer-form': function () { reviewTransfer(); },
+      'adjust-form': function () { doAdjust(form); },
+      'bank-form': function () { doBankUpdate(form); }
+    };
+    if (handlers[form.id]) {
+      e.preventDefault();
+      handlers[form.id]();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    const authTab = e.target.closest('[data-auth-tab]');
+    if (authTab) { setAuthTab(authTab.dataset.authTab); return; }
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'nav') { switchView(el.dataset.view); return; }
+    if (action === 'copy-account') { copyAccount(); return; }
+    if (action === 'logout') { doSignOut(); return; }
+    if (action === 'reset-config') { resetConnection(); return; }
+    if (action === 'retry') { retryBoot(); return; }
+    if (action === 'refresh') { manualRefresh(el); return; }
+    if (action === 'amount') { setAmount(el.dataset.value); return; }
+    if (action === 'filter') { state.filter = el.dataset.filter; renderHistory(); return; }
+    if (action === 'send-to') { prefillTransfer(el.dataset.account, el.dataset.name); return; }
+    if (action === 'close-modal') { closeModal(); return; }
+    if (action === 'confirm-transfer') { confirmTransfer(el); return; }
+    if (action === 'adjust') { openAdjustModal(el.dataset.account, el.dataset.kind); return; }
+    if (action === 'toggle-block') { askToggleBlock(el.dataset.account, el.dataset.blocked === 'true'); return; }
+    if (action === 'edit-bank') { openBankModal(); return; }
+    if (action === 'confirm-run') { runConfirm(el); return; }
+  });
+
+  $('modal-root').addEventListener('click', function (e) {
+    if (e.target.classList.contains('modal-wrap')) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('modal-root').classList.contains('hidden')) closeModal();
+  });
+  $('t-amount').addEventListener('input', updateTransferPreview);
+  $('t-account').addEventListener('input', updateResolved);
+  $('conv-input').addEventListener('input', updateConverter);
+  $('participant-search').addEventListener('input', function (e) {
+    state.query = e.target.value;
+    renderParticipants();
+  });
+
+  /* ── start ─────────────────────────────────────────────────────── */
+  function init() {
+    const cfg = readConfig();
+    if (!cfg.url || !cfg.key) {
+      showOnly('setup');
+      return;
+    }
+    connect(cfg);
+  }
+  init();
+})();
+</script>
 </body>
 </html>
