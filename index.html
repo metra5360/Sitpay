@@ -384,7 +384,7 @@
           <li><svg class="ico"><use href="#i-check"/></svg><span>Balances can only change through protected database rules — never from the browser.</span></li>
           <li><svg class="ico"><use href="#i-check"/></svg><span>The first account becomes the administrator, with server-enforced rights and full capital monitoring.</span></li>
         </ul>
-        <div class="hero-strip"><span>1 SŦK = 5 UAH</span><span>Capital 10,000 SŦK</span><span>Welcome 100 SŦK</span></div>
+        <div class="hero-strip"><span>1 SŦK = 5 UAH</span><span>Capital 1,000,000 SŦK</span><span>Welcome 100 SŦK</span></div>
       </div>
       <div class="auth-card">
         <h2>Bank setup (administrator only)</h2>
@@ -427,7 +427,7 @@
           <li><svg class="ico"><use href="#i-check"/></svg><span>Official rate: 1 SŦK = 5 UAH.</span></li>
           <li><svg class="ico"><use href="#i-lock"/></svg><span>Money moves only through protected database rules, never from the browser.</span></li>
         </ul>
-        <div class="hero-strip"><span>Sitcoin · SŦK</span><span>Capital 10,000 SŦK</span></div>
+        <div class="hero-strip"><span>Sitcoin · SŦK</span><span>Capital 1,000,000 SŦK</span></div>
       </div>
       <div class="auth-card">
         <h2>Welcome to SitBank</h2>
@@ -639,7 +639,7 @@
         </div>
         <div class="grid stats" style="margin-top:16px">
           <div class="card stat"><div class="stat-label">Currency</div><div class="stat-value" id="bank-currency">Sitcoin (SŦK)</div><div class="stat-sub">Virtual currency of SitBank</div></div>
-          <div class="card stat"><div class="stat-label">Initial bank capital</div><div class="stat-value" id="bank-capital">10,000.00 SŦK</div><div class="stat-sub" id="bank-capital-uah">—</div></div>
+          <div class="card stat"><div class="stat-label">Total bank capital</div><div class="stat-value" id="bank-capital">1,000,000.00 SŦK</div><div class="stat-sub" id="bank-capital-uah">—</div></div>
           <div class="card stat"><div class="stat-label">Initial participant balance</div><div class="stat-value" id="bank-initial">100.00 SŦK</div><div class="stat-sub" id="bank-initial-uah">—</div></div>
           <div class="card stat"><div class="stat-label">Bank reserve</div><div class="stat-value" id="bank-reserve">—</div><div class="stat-sub">Unissued capital</div></div>
           <div class="card stat"><div class="stat-label">In circulation</div><div class="stat-value" id="bank-circ">—</div><div class="stat-sub">Held by participants</div></div>
@@ -663,7 +663,7 @@
             <div class="kv"><span>Bank name</span><b id="bank-name-2">SitBank</b></div>
             <div class="kv"><span>Currency</span><b id="bank-code">SŦK</b></div>
             <div class="kv"><span>Exchange rate</span><b id="bank-rate-2">1 SŦK = 5 ₴</b></div>
-            <div class="kv"><span>Initial capital</span><b id="bank-capital-2">10,000.00 SŦK</b></div>
+            <div class="kv"><span>Total bank capital</span><b id="bank-capital-2">1,000,000.00 SŦK</b></div>
             <div class="kv"><span>Welcome balance</span><b id="bank-initial-2">100.00 SŦK</b></div>
             <div class="kv"><span>Information updated</span><b id="bank-updated">—</b></div>
             <p class="help" style="margin-top:12px">Sitcoin is a virtual currency used only inside this banking system. It has no cash value outside SitBank.</p>
@@ -933,9 +933,12 @@
   function readConfig() {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}') || {}; } catch (e) { saved = {}; }
+    // A key/URL baked into this file takes priority, so a stale saved value on
+    // one device can't break the shared file for everyone. If the file has no
+    // baked-in config, fall back to the value saved on this device.
     return {
-      url: trim(saved.url || SUPABASE_URL).replace(/\/+$/, ''),
-      key: trim(saved.key || SUPABASE_ANON_KEY)
+      url: trim(SUPABASE_URL || saved.url).replace(/\/+$/, ''),
+      key: trim(SUPABASE_ANON_KEY || saved.key)
     };
   }
 
@@ -1401,7 +1404,7 @@
         '<td class="num">' + money(p.balance) + '</td>' +
         '<td>' + (p.is_blocked ? '<span class="badge warn">Blocked</span>' : '<span class="badge ok">Active</span>') + '</td>' +
         '<td class="actions">' +
-          '<button class="btn sm" data-action="adjust" data-account="' + esc(p.account_number) + '" data-kind="deposit">Add</button>' +
+          '<button class="btn sm" data-action="adjust" data-account="' + esc(p.account_number) + '" data-kind="deposit">Send</button>' +
           '<button class="btn sm" data-action="adjust" data-account="' + esc(p.account_number) + '" data-kind="withdrawal">Withdraw</button>' +
           (self ? '' : '<button class="btn sm ' + (p.is_blocked ? '' : 'danger') + '" data-action="toggle-block" data-account="' +
             esc(p.account_number) + '" data-blocked="' + (p.is_blocked ? 'false' : 'true') + '">' +
@@ -1430,7 +1433,7 @@
       '<div class="kv"><span>Bank name</span><b>' + esc(b.bank_name) + '</b></div>' +
       '<div class="kv"><span>Currency</span><b>' + esc(b.currency_name + ' (' + b.currency_code + ')') + '</b></div>' +
       '<div class="kv"><span>Official rate</span><b>1 ' + esc(b.currency_code) + ' = ' + money(b.rate_uah) + ' UAH</b></div>' +
-      '<div class="kv"><span>Initial capital</span><b>' + money(b.initial_capital) + ' ' + esc(b.currency_code) + '</b></div>' +
+      '<div class="kv"><span>Total bank capital</span><b>' + money(b.initial_capital) + ' ' + esc(b.currency_code) + '</b></div>' +
       '<div class="kv"><span>Welcome balance</span><b>' + money(b.initial_balance) + ' ' + esc(b.currency_code) + '</b></div>' +
       '<div class="kv"><span>Reserve</span><b>' + money(b.reserve) + ' ' + esc(b.currency_code) + '</b></div>' +
       '<div class="kv"><span>Last updated</span><b>' + esc(fmtDate(b.updated_at)) + '</b></div>';
@@ -1590,18 +1593,18 @@
     const isDeposit = kind === 'deposit';
     state.adminKey = newKey();
     openModal(
-      '<div class="modal-head"><h3>' + (isDeposit ? 'Add funds' : 'Withdraw funds') + '</h3>' +
+      '<div class="modal-head"><h3>' + (isDeposit ? 'Send from bank' : 'Withdraw to bank') + '</h3>' +
       '<button class="icon-btn" data-action="close-modal" aria-label="Close">✕</button></div>' +
       '<p class="muted small">' + esc(p ? p.full_name : 'Account') + ' · <span class="mono">' + esc(account) + '</span></p>' +
       '<form id="adjust-form" data-kind="' + esc(kind) + '" data-account="' + esc(account) + '">' +
         '<div class="field"><label for="adj-amount">Amount (' + esc(cur()) + ')</label>' +
           '<input id="adj-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>' +
         '<div class="field"><label for="adj-desc">Description</label>' +
-          '<input id="adj-desc" maxlength="80" value="' + (isDeposit ? 'Manual deposit' : 'Manual withdrawal') + '"></div>' +
-        '<p class="help">' + (isDeposit ? 'Funded from the bank reserve.' : 'Returned to the bank reserve.') +
+          '<input id="adj-desc" maxlength="80" value="' + (isDeposit ? 'Sent from SitBank' : 'Returned to SitBank') + '"></div>' +
+        '<p class="help">' + (isDeposit ? 'This sends Sitcoin from the bank reserve to this account.' : 'This returns Sitcoin from this account to the bank reserve.') +
           ' The operation is recorded permanently in the shared ledger.</p>' +
         '<div class="modal-actions"><button type="button" class="btn" data-action="close-modal">Cancel</button>' +
-        '<button class="btn primary" type="submit">' + (isDeposit ? 'Add funds' : 'Withdraw funds') + '</button></div>' +
+        '<button class="btn primary" type="submit">' + (isDeposit ? 'Send from bank' : 'Withdraw to bank') + '</button></div>' +
       '</form>'
     );
   }
@@ -1625,8 +1628,8 @@
       if (res.error) throw res.error;
       closeModal();
       state.adminKey = null;
-      toast((kind === 'deposit' ? 'Added ' : 'Withdrew ') + money(amount) + ' ' + cur() +
-        (kind === 'deposit' ? ' to ' : ' from ') + account + '.', 'ok');
+      toast((kind === 'deposit' ? 'Sent ' : 'Withdrew ') + money(amount) + ' ' + cur() +
+        (kind === 'deposit' ? ' from the bank to ' : ' from ' + account + ' to the bank') + (kind === 'deposit' ? account : '') + '.', 'ok');
       await refreshData(false);
       renderAll();
     } catch (err) {
@@ -1672,14 +1675,14 @@
         '<div class="field"><label for="b-rate">Official rate — UAH per 1 ' + esc(b.currency_code) + '</label>' +
           '<input id="b-rate" type="number" min="0.0001" step="0.0001" value="' + esc(b.rate_uah) + '" required></div>' +
         '<div class="grid two-col">' +
-          '<div class="field"><label for="b-capital">Initial bank capital</label>' +
+          '<div class="field"><label for="b-capital">Total bank capital</label>' +
             '<input id="b-capital" type="number" min="0" step="0.01" value="' + esc(b.initial_capital) + '"></div>' +
           '<div class="field"><label for="b-initial">New participant balance</label>' +
             '<input id="b-initial" type="number" min="0" step="0.01" value="' + esc(b.initial_balance) + '"></div>' +
         '</div>' +
         '<div class="field"><label for="b-note">Public note</label>' +
           '<input id="b-note" maxlength="240" value="' + esc(b.note) + '"></div>' +
-        '<p class="help">Initial values describe the bank and apply to future participants; existing balances are not recalculated.</p>' +
+        '<p class="help">The welcome balance applies to future participants. Raising the total bank capital adds the difference to the bank reserve so you can send more Sitcoin from the bank.</p>' +
         '<div class="modal-actions"><button type="button" class="btn" data-action="close-modal">Cancel</button>' +
         '<button class="btn primary" type="submit">Save settings</button></div>' +
       '</form>'
